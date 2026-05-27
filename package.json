@@ -1,0 +1,44 @@
+{
+  "name": "mercury",
+  "version": "1.0.0",
+  "description": "Mercury 是一个跨平台、本地优先、AI 增强型 RSS 阅读器。",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build:renderer": "vite build",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build": "npm run build:renderer && npm run build:main",
+    "start": "electron .",
+    "dev:electron": "npm run build:main && electron . --dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yinch-pan/Mercury.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Yinch-pan/Mercury/issues"
+  },
+  "homepage": "https://github.com/Yinch-pan/Mercury#readme",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.9.1",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "electron": "^42.3.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^7.3.3",
+    "vue": "^3.5.34"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "fast-xml-parser": "^5.8.0",
+    "lucide-vue-next": "^0.460.0",
+    "node-fetch": "^3.3.2",
+    "rss-parser": "^3.13.0",
+    "sanitize-html": "^2.17.4",
+    "turndown": "^7.2.4"
+  }
+}

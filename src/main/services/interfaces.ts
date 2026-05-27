@@ -1,0 +1,140 @@
+import { Feed, Article, ArticleContent, Tag, LLMConfig } from '../types'
+
+/**
+ * Feed 服务接口
+ * 负责订阅源管理、OPML 导入导出、Feed 刷新
+ */
+export interface IFeedService {
+  // 添加订阅源
+  addFeed(url: string): Promise<Feed>
+
+  // 删除订阅源
+  deleteFeed(feedId: string): Promise<void>
+
+  // 获取所有订阅源
+  getAllFeeds(): Promise<Feed[]>
+
+  // 刷新单个订阅源
+  refreshFeed(feedId: string): Promise<Article[]>
+
+  // 刷新所有订阅源
+  refreshAllFeeds(): Promise<void>
+
+  // 导入 OPML
+  importOpml(filePath: string): Promise<Feed[]>
+
+  // 导出 OPML
+  exportOpml(filePath: string): Promise<void>
+}
+
+/**
+ * 文章服务接口
+ * 负责文章列表、文章内容、已读状态管理
+ */
+export interface IArticleService {
+  // 获取指定订阅源的文章列表
+  getArticlesByFeed(feedId: string): Promise<Article[]>
+
+  // 获取所有文章
+  getAllArticles(): Promise<Article[]>
+
+  // 获取未读文章
+  getUnreadArticles(): Promise<Article[]>
+
+  // 获取文章详细内容
+  getArticleContent(articleId: string): Promise<ArticleContent>
+  // 标记文章为已读
+  markAsRead(articleId: string): Promise<void>
+
+  // 标记文章为未读
+  markAsUnread(articleId: string): Promise<void>
+}
+
+/**
+ * 内容清洗服务接口
+ * 负责正文抓取、HTML 清洗、Markdown 转换
+ */
+export interface ICleaningService {
+  // 抓取并清洗文章内容
+  cleanArticle(articleId: string, url: string): Promise<{
+    cleanedHtml: string
+    cleanedMarkdown: string
+    title?: string
+    author?: string
+  }>
+}
+
+/**
+ * AI 摘要服务接口
+ * 负责调用 LLM 生成文章摘要
+ */
+export interface ISummaryService {
+  // 生成文章摘要
+  summarize(articleId: string): Promise<string>
+}
+
+/**
+ * AI 翻译服务接口
+ * 负责调用 LLM 翻译文章
+ */
+export interface ITranslationService {
+  // 翻译文章
+  translate(articleId: string, targetLang: string): Promise<string>
+}
+
+/**
+ * 标签服务接口
+ * 负责标签管理、文章打标签、按标签筛选
+ */
+export interface ITagService {
+  // 获取所有标签
+  getAllTags(): Promise<Tag[]>
+
+  // 创建标签
+  createTag(name: string): Promise<Tag>
+
+  // 删除标签
+  deleteTag(tagId: string): Promise<void>
+
+  // 给文章添加标签
+  addTagToArticle(articleId: string, tagName: string): Promise<void>
+
+  // 从文章移除标签
+  removeTagFromArticle(articleId: string, tagName: string): Promise<void>
+
+  // 获取文章的所有标签
+  getArticleTags(articleId: string): Promise<Tag[]>
+
+  // 按标签筛选文章
+  getArticlesByTag(tagName: string): Promise<Article[]>
+}
+
+/**
+ * 导出服务接口
+ * 负责 Markdown 导出
+ */
+export interface IExportService {
+  // 导出单篇文章为 Markdown
+  exportArticle(articleId: string, filePath: string): Promise<void>
+
+  // 批量导出文章
+  exportArticles(articleIds: string[], dirPath: string): Promise<void>
+}
+
+/**
+ * 设置服务接口
+ * 负责应用设置、LLM 配置管理
+ */
+export interface ISettingsService {
+  // 获取 LLM 配置
+  getLLMConfig(): Promise<LLMConfig>
+
+  // 保存 LLM 配置
+  saveLLMConfig(config: LLMConfig): Promise<void>
+
+  // 获取应用设置
+  getSetting(key: string): Promise<string | null>
+
+  // 保存应用设置
+  saveSetting(key: string, value: string): Promise<void>
+}

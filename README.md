@@ -4,6 +4,47 @@
 
 Mercury 是一个跨平台、本地优先、AI 增强型 RSS 阅读器。
 
+## 快速开始
+
+### 安装依赖
+
+\`\`\`bash
+npm install
+\`\`\`
+
+### 开发模式
+
+方式一（推荐）：
+\`\`\`bash
+./dev.sh
+\`\`\`
+
+方式二：
+\`\`\`bash
+# 终端 1：启动 Vite 开发服务器
+npm run dev
+
+# 终端 2：启动 Electron
+npm run dev:electron
+\`\`\`
+
+### 构建
+
+\`\`\`bash
+npm run build
+\`\`\`
+
+## 当前进度
+
+✅ **第 1 周 Demo 骨架已完成**
+
+- 项目初始化完成
+- 三栏布局 UI 实现
+- Mock 数据和基础交互
+- 数据模型和 Service 接口定义
+
+详见 [INIT.md](./INIT.md)
+
 ## Maintainers
 
 - 潘飞扬
