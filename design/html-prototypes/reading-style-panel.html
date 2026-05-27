@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercury - 阅读样式</title>
+    <style>
+        * {
+      margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 80px 20px 20px;
+            height: 100vh;
+        }
+
+        .style-panel {
+            background: #ffffff;
+        border-radius: 8px;
+            width: 320px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+    .panel-header {
+          padding: 16px 20px;
+            border-bottom: 1px solid #e4e7ed;
+            display: flex;
+          justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+          font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .close-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 18px;
+            color: #909399;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #2c3e50;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .style-group {
+            margin-bottom: 24px;
+        }
+
+        .style-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .style-label {
+            font-size: 13px;
+         font-weight: 500;
+            color: #606266;
+          margin-bottom: 12px;
+            display: block;
+        }
+
+    /* 字体选择 */
+        .font-options {
+            display: grid;
+         grid-template-columns: 1fr 1fr;
+     gap: 8px;
+        }
+
+        .font-option {
+        padding: 10px;
+            border: 1px solid #dcdfe6;
+         border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+          color: #606266;
+        }
+        .font-option:hover {
+            border-color: #409eff;
+            color: #409eff;
+        }
+
+     .font-option.active {
+            background: #ecf5ff;
+            border-color: #409eff;
+      color: #409eff;
+        }
+
+        /* 字号调节 */
+        .size-control {
+            display: flex;
+        align-items: center;
+        gap: 12px;
+        }
+
+        .size-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #dcdfe6;
+            background: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+         display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .size-btn:hover {
+            border-color: #409eff;
+            color: #409eff;
+        }
+
+        .size-value {
+            flex: 1;
+            text-align: center;
+            font-size: 14px;
+            color: #606266;
+        }
+
+      /* 行距调节 */
+        .spacing-slider {
+            width: 100%;
+        }
+
+        .slider-container {
+            display: flex;
+      align-items: center;
+            gap: 12px;
+        }
+
+        .slider {
+            flex: 1;
+       height: 4px;
+         background: #e4e7ed;
+      border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .slider-track {
+            height: 100%;
+            background: #409eff;
+            border-radius: 2px;
+            width: 60%;
+      }
+
+        .slider-thumb {
+            position: absolute;
+            top: 50%;
+      left: 60%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background: #409eff;
+         border: 2px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            cursor: grab;
+        }
+
+        .slider-value {
+            font-size: 13px;
+            color: #606266;
+            min-width: 32px;
+            text-align: right;
+      }
+
+        /* 宽度选择 */
+        .width-options {
+         display: flex;
+            gap: 8px;
+        }
+
+        .width-option {
+            flex: 1;
+         padding: 8px;
+          border: 1px solid #dcdfe6;
+        border-radius: 6px;
+            text-align: center;
+          cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+         color: #606266;
+        }
+
+        .width-option:hover {
+            border-color: #409eff;
+       color: #409eff;
+        }
+
+        .width-option.active {
+            background: #ecf5ff;
+            border-color: #409eff;
+        color: #409eff;
+        }
+
+        /* 主题切换 */
+        .theme-options {
+         display: flex;
+            gap: 12px;
+        }
+
+      .theme-option {
+            flex: 1;
+            padding: 16px;
+       border: 2px solid #dcdfe6;
+            border-radius: 8px;
+         cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+          align-items: center;
+          gap: 8px;
+    }
+
+        .theme-option:hover {
+            border-color: #409eff;
+        }
+
+        .theme-option.active {
+          border-color: #409eff;
+      background: #ecf5ff;
+        }
+
+        .theme-preview {
+            width: 100%;
+         height: 40px;
+            border-radius: 4px;
+            display: flex;
+     align-items: center;
+      justify-content: center;
+            font-size: 20px;
+     }
+
+        .theme-preview.light {
+            background: #ffffff;
+          border: 1px solid #e4e7ed;
+        }
+
+     .theme-preview.dark {
+            background: #1e1e1e;
+            color: #ffffff;
+      }
+
+        .theme-name {
+            font-size: 12px;
+            color: #606266;
+        }
+
+        /* 分隔线 */
+        .divider {
+            height: 1px;
+            background: #e4e7ed;
+            margin: 20px 0;
+        }
+
+        /* 重置按钮 */
+        .reset-btn {
+            width: 100%;
+            padding: 10px;
+          border: 1px solid #dcdfe6;
+            background: #ffff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #606266;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+          border-color: #409eff;
+         color: #409eff;
+        }
+    </style>
+</head>
+<body>
+    <div class="style-panel">
+        <div class="panel-header">
+            <div class="panel-title">阅读样式</div>
+            <button class="close-btn">×</button>
+        </div>
+
+        <div class="panel-body">
+            <!-- 字体 -->
+         <div class="style-group">
+                <label class="style-label">字体</label>
+              <div class="font-options">
+                  <div class="font-option active">系统默认</div>
+                 <div class="font-option">思源宋体</div>
+            <div class="font-option">霞鹜文楷</div>
+                    <div class="font-option">Serif</div>
+                </div>
+            </div>
+
+            <!-- 字号 -->
+            <div class="style-group">
+           <label class="style-label">字号</label>
+                <div class="size-control">
+               <button class="size-btn">-</button>
+                    <div class="size-value">16px</div>
+                <button class="size-btn">+</button>
+                </div>
+       </div>
+
+            <!-- 行距 -->
+            <div class="style-group">
+            <label class="style-label">行距</label>
+                <div class="slider-container">
+             <div class="slider">
+               <div class="slider-track"></div>
+                        <div class="slider-thumb"></div>
+                 </div>
+                <div class="slider-value">1.8</div>
+            </div>
+            </div>
+
+            <!-- 内容宽度 -->
+            <div class="style-group">
+                <label class="style-label">内容宽度</label>
+                <div class="width-options">
+              <div class="width-option">窄</div>
+           <div class="width-option active">中</div>
+                    <div class="width-option">宽</div>
+                  <div class="width-option">全屏</div>
+           </div>
+            </div>
+
+          <div class="divider"></div>
+
+            <!-- 主题 -->
+            <div class="style-group">
+            <label class="style-label">主题</label>
+                <div class="theme-options">
+                    <div class="theme-option active">
+                  <div class="theme-preview light">☀️</div>
+                <div class="theme-name">浅色</div>
+                    </div>
+                    <div class="theme-option">
+                        <div class="theme-preview dark">🌙</div>
+                  <div class="theme-name">深色</div>
+                    </div>
+                </div>
+            </div>
+
+        <div class="divider"></div>
+
+         <!-- 重置 -->
+            <button class="reset-btn">恢复默认设置</button>
+        </div>
+    </div>
+</body>
+</html>

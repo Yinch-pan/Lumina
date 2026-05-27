@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercury - 编辑订阅</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+      }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: rgba(0, 0, 0.5);
+            display: flex;
+            align-items: center;
+         justify-content: center;
+            height: 100vh;
+        }
+
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+          right: 0;
+            bottom: 0;
+       background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialog {
+          background: #ffffff;
+            border-radius: 8px;
+            width: 500px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      }
+
+      .dialog-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e4e7ed;
+        }
+
+        .dialog-title {
+         font-size: 18px;
+            font-weight: 600;
+        color: #2c3e50;
+        }
+
+        .dialog-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+    .form-label {
+            display: block;
+          font-size: 14px;
+            font-weight: 500;
+            color: #606266;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+        border: 1px solid #dcdfe6;
+            border-radius: 4px;
+       font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #409eff;
+            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+        }
+
+        .form-input:disabled {
+            background: #f5f7fa;
+            color: #909399;
+          cursor: not-allowed;
+        }
+
+        .form-hint {
+          font-size: 12px;
+            color: #909399;
+          margin-top: 6px;
+        }
+
+        .danger-zone {
+            margin-top: 24px;
+            padding-top: 24px;
+        border-top: 1px solid #e4e7ed;
+     }
+
+        .danger-zone-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #f56c6c;
+            margin-bottom: 12px;
+     }
+
+     .danger-zone-desc {
+            font-size: 13px;
+         color: #909399;
+         margin-bottom: 12px;
+        }
+
+        .dialog-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e4e7ed;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .footer-left {
+            display: flex;
+            gap: 12px;
+        }
+
+        .footer-right {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid #dcdfe6;
+            background: #ffffff;
+          border-radius: 4px;
+            cursor: pointer;
+    font-size: 14px;
+            transition: all 0.2s;
+        }
+
+      .btn:hover {
+            background: #f5f7fa;
+        }
+
+        .btn-primary {
+            background: #409eff;
+            color: #ffffff;
+            border-color: #409eff;
+        }
+
+        .btn-primary:hover {
+            background: #66b1ff;
+        }
+
+        .btn-danger {
+            background: #f56c6c;
+            color: #ffffff;
+          border-color: #f56c6c;
+        }
+
+        .btn-danger:hover {
+            background: #f78989;
+        }
+    </style>
+</head>
+<body>
+    <div class="dialog-overlay">
+        <div class="dialog">
+       <div class="dialog-header">
+       <div class="dialog-title">编辑订阅源</div>
+          </div>
+            <div class="dialog-body">
+       <div class="form-group">
+             <label class="form-label">订阅源 URL</label>
+              <input type="text" class="form-input" value="https://news.ycombinator.com/rss" disabled>
+      <div class="form-hint">URL 不可修改</div>
+             </div>
+                <div class="form-group">
+                <label class="form-label">自定义名称</label>
+                <input type="text" class="form-input" value="Hacker News" placeholder="留空则使用订阅源标题">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">刷新频率</label>
+                    <select class="form-input">
+              <option>每小时</option>
+                <option selected>每 3 小时</option>
+                   <option>每 6 小时</option>
+               <option>每 12 小时</option>
+                        <option>每天</option>
+                        <option>手动刷新</option>
+               </select>
+                </div>
+
+                <div class="danger-zone">
+          <div class="danger-zone-title">⚠️ 危险操作</div>
+                    <div class="danger-zone-desc">删除订阅源将同时删除该源下的所有文章数据，此操作不可恢复。</div>
+                </div>
+            </div>
+            <div class="dialog-footer">
+                <div class="footer-left">
+                 <button class="btn btn-danger">删除订阅源</button>
+                </div>
+                <div class="footer-right">
+                    <button class="btn">取消</button>
+                 <button class="btn btn-primary">保存修改</button>
+             </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

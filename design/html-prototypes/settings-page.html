@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercury - 设置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+    }
+
+        .settings-container {
+       display: flex;
+            height: 100vh;
+        }
+
+      /* 左侧导航 */
+     .settings-sidebar {
+            width: 240px;
+            background: #ffffff;
+            border-right: 1px solid #e4e7ed;
+            padding: 24px 0;
+      }
+
+        .settings-nav-title {
+            padding: 0 24px;
+          font-size: 12px;
+          color: #909399;
+            font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .settings-nav-item {
+            padding: 12px 24px;
+            cursor: pointer;
+         transition: all 0.2s;
+            font-size: 14px;
+          color: #606266;
+            display: flex;
+         align-items: center;
+            gap: 10px;
+        }
+
+        .settings-nav-item:hover {
+            background: #f5f7fa;
+        color: #409eff;
+        }
+
+        .settings-nav-item.active {
+            background: #ecf5ff;
+          color: #409eff;
+          border-right: 2px solid #409eff;
+        }
+
+     /* 右侧内容区 */
+      .settings-content {
+            flex: 1;
+            overflow-y: auto;
+         padding: 32px 48px;
+        }
+
+        .settings-section {
+            background: #ffffff;
+      border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .section-description {
+            font-size: 14px;
+          color: #909399;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+         font-weight: 500;
+            color: #606266;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+          padding: 10px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #409eff;
+        box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+        }
+
+      .form-hint {
+            font-size: 12px;
+            color: #909399;
+          margin-top: 6px;
+        }
+
+        .form-row {
+       display: grid;
+            grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .test-connection {
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid #dcdfe6;
+            background: #ffffff;
+            border-radius: 4px;
+          cursor: pointer;
+      font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+        background: #f5f7fa;
+            border-color: #409eff;
+          color: #409eff;
+        }
+
+        .btn-primary {
+            background: #409eff;
+         color: #ffff;
+            border-color: #409eff;
+        }
+
+        .btn-primary:hover {
+        background: #66b1ff;
+        }
+
+        .switch-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+    .switch-group:last-child {
+            border-bottom: none;
+        }
+
+        .switch-info {
+            flex: 1;
+        }
+
+        .switch-label {
+            font-size: 14px;
+            font-weight: 500;
+          color: #606266;
+       margin-bottom: 4px;
+      }
+
+        .switch-description {
+            font-size: 13px;
+          color: #909399;
+        }
+
+        .switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #dcdfe6;
+          border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+     }
+
+        .switch.active {
+            background: #409eff;
+        }
+
+        .switch::after {
+            content: '';
+            position: absolute;
+          top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+          background: #ffffff;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+     .switch.active::after {
+            left: 22px;
+        }
+
+        .tag-management {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .tag-item {
+            display: flex;
+            align-items: center;
+        gap: 8px;
+            padding: 8px 12px;
+        background: #f4f4f5;
+        border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .tag-name {
+          color: #606266;
+        }
+
+        .tag-count {
+            color: #909399;
+            font-size: 12px;
+        }
+
+        .tag-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tag-action-btn {
+          width: 20px;
+            height: 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+         display: flex;
+          align-items: center;
+        justify-content: center;
+        }
+
+        .tag-action-btn:hover {
+         background: rgba(0, 0, 0, 0.1);
+        }
+
+        .add-tag-btn {
+          padding: 8px 12px;
+         border: 1px dashed #dcdfe6;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #909399;
+      transition: all 0.2s;
+        }
+
+        .add-tag-btn:hover {
+          border-color: #409eff;
+            color: #409eff;
+        }
+
+        .save-bar {
+            position: fixed;
+          bottom: 0;
+            left: 240px;
+          right: 0;
+            background: #ffffff;
+            border-top: 1px solid #e4e7ed;
+            padding: 16px 48px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <!-- 左侧导航 -->
+        <div class="settings-sidebar">
+            <div class="settings-nav-title">设置</div>
+            <div class="settings-nav-item active">
+            <span>🤖</span>
+                <span>AI 配置</span>
+            </div>
+          <div class="settings-nav-item">
+            <span>⚙️</span>
+                <span>应用设置</span>
+            </div>
+            <div class="settings-nav-item">
+             <span>🏷️</span>
+             <span>标签管理</span>
+            </div>
+         <div class="settings-nav-item">
+           <span>📖</span>
+                <span>阅读偏好</span>
+            </div>
+        <div class="settings-nav-item">
+                <span>💾</span>
+        <span>数据管理</span>
+          </div>
+            <div class="settings-nav-item">
+          <span>ℹ️</span>
+            <span>关于</span>
+         </div>
+        </div>
+
+        <!-- 右侧内容区 -->
+      <div class="settings-content">
+            <!-- AI 配置 -->
+      <div class="settings-section">
+              <div class="section-title">AI 配置</div>
+          <div class="section-description">配置大语言模型服务，用于文章摘要和翻译功能</div>
+
+                <div class="form-group">
+                 <label class="form-label">API Base URL</label>
+                  <input type="text" class="form-input" value="https://api.openai.com/v1" placeholder="https://api.openai.com/v1">
+                    <div class="form-hint">支持 OpenAI-compatible API</div>
+                </div>
+
+          <div class="form-group">
+             <label class="form-label">API Key</label>
+             <input type="password" class="form-input" value="sk-xxxxxxxxxxxxxxxxxxxxxxxx" placeholder="输入您的 API Key">
+             <div class="form-hint">您的 API Key 将安全存储在本地</div>
+                </div>
+
+                <div class="form-row">
+            <div class="form-group">
+                  <label class="form-label">模型</label>
+              <input type="text" class="form-input" value="gpt-4" placeholder="gpt-4">
+              </div>
+                <div class="form-group">
+                    <label class="form-label">Temperature</label>
+                  <input type="number" class="form-input" value="0.7" min="0" max="2" step="0.1">
+                 </div>
+        </div>
+
+                <div class="test-connection">
+                 <button class="btn">测试连接</button>
+            </div>
+       </div>
+
+            <!-- 应用设置 -->
+            <div class="settings-section">
+           <div class="section-title">应用设置</div>
+                <div class="section-description">自定义应用行为和界面</div>
+
+          <div class="switch-group">
+            <div class="switch-info">
+                        <div class="switch-label">开机自动启动</div>
+                   <div class="switch-description">系统启动时自动打开 Mercury</div>
+            </div>
+               <div class="switch"></div>
+             </div>
+
+                <div class="switch-group">
+                    <div class="switch-info">
+                 <div class="switch-label">最小化到系统托盘</div>
+                 <div class="switch-description">关闭窗口时最小化到托盘而不是退出</div>
+          </div>
+                <div class="switch active"></div>
+             </div>
+
+                <div class="switch-group">
+                    <div class="switch-info">
+                      <div class="switch-label">自动刷新订阅源</div>
+                   <div class="switch-description">定期自动刷新所有订阅源</div>
+                    </div>
+                    <div class="switch active"></div>
+                </div>
+
+                <div class="form-group" style="margin-top: 24px;">
+             <label class="form-label">刷新间隔</label>
+              <select class="form-input">
+                        <option>每小时</option>
+                 <option selected>每 3 小时</option>
+              <option>每 6 小时</option>
+                        <option>每 12 小时</option>
+                </select>
+                </div>
+
+          <div class="form-group">
+                    <label class="form-label">界面语言</label>
+                    <select class="form-input">
+                        <option selected>简体中文</option>
+                   <option>English</option>
+                    </select>
+            </div>
+            </div>
+
+            <!-- 标签管理 -->
+          <div class="settings-section">
+                <div class="section-title">标签管理</div>
+                <div class="section-description">管理您的文章标签</div>
+
+                <div class="tag-management">
+                    <div class="tag-item">
+                     <span class="tag-name">技术</span>
+             <span class="tag-count">(23)</span>
+                 <div class="tag-actions">
+                            <button class="tag-action-btn">✏️</button>
+                  <button class="tag-action-btn">🗑️</button>
+                        </div>
+            </div>
+                    <div class="tag-item">
+                        <span class="tag-name">设计</span>
+            <span class="tag-count">(15)</span>
+                    <div class="tag-actions">
+                       <button class="tag-action-btn">✏️</button>
+                      <button class="tag-action-btn">🗑️</button>
+                   </div>
+                </div>
+                    <div class="tag-item">
+                   <span class="tag-name">产品</span>
+              <span class="tag-count">(8)</span>
+                 <div class="tag-actions">
+                    <button class="tag-action-btn">✏️</button>
+               <button class="tag-action-btn">🗑️</button>
+                  </div>
+                </div>
+              <div class="tag-item">
+                        <span class="tag-name">AI</span>
+                   <span class="tag-count">(31)</span>
+                   <div class="tag-actions">
+                            <button class="tag-action-btn">✏️</button>
+                      <button class="tag-action-btn">🗑️</button>
+                        </div>
+                    </div>
+                    <button class="add-tag-btn">+ 添加标签</button>
+           </div>
+         </div>
+
+          <!-- 阅读偏好 -->
+            <div class="settings-section">
+                <div class="section-title">阅读偏好</div>
+                <div class="section-description">自定义阅读体验</div>
+
+                <div class="form-group">
+                  <label class="form-label">字体</label>
+              <select class="form-input">
+              <option selected>系统默认</option>
+                        <option>思源宋体</option>
+                        <option>霞鹜文楷</option>
+                      <option>Serif</option>
+                </select>
+           </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+               <label class="form-label">字号</label>
+                        <select class="form-input">
+                       <option>14px</option>
+                    <option selected>16px</option>
+            <option>18px</option>
+                          <option>20px</option>
+                     </select>
+          </div>
+                <div class="form-group">
+                    <label class="form-label">行距</label>
+                <select class="form-input">
+                            <option>1.5</option>
+                        <option selected>1.8</option>
+                    <option>2.0</option>
+                </select>
+                    </div>
+           </div>
+
+                <div class="switch-group">
+                    <div class="switch-info">
+             <div class="switch-label">深色模式</div>
+                        <div class="switch-description">使用深色主题保护眼睛</div>
+             </div>
+                    <div class="switch"></div>
+                </div>
+            </div>
+
+         <!-- 数据管理 -->
+            <div class="settings-section">
+                <div class="section-title">数据管理</div>
+                <div class="section-description">管理本地数据和缓存</div>
+
+                <div class="form-group">
+           <label class="form-label">数据目录</label>
+           <div style="display: flex; gap: 8px;">
+                    <input type="text" class="form-input" value="/Users/username/Library/Application Support/Mercury" disabled>
+                      <button class="btn">打开</button>
+                  </div>
+                </div>
+
+          <div class="form-group">
+                    <label class="form-label">缓存大小</label>
+                 <div style="display: flex; gap: 8px; align-items: center;">
+           <input type="text" class="form-input" value="256 MB" disabled style="flex: 1;">
+                        <button class="btn">清理缓存</button>
+        </div>
+                </div>
+
+              <div class="form-group">
+             <label class="form-label">导出数据</label>
+             <div style="display: flex; gap: 8px;">
+                 <button class="btn">导出 OPML</button>
+                  <button class="btn">导出数据库</button>
+             </div>
+                </div>
+        </div>
+        </div>
+
+        <!-- 底部保存栏 -->
+        <div class="save-bar">
+            <button class="btn">重置</button>
+            <button class="btn btn-primary">保存设置</button>
+        </div>
+    </div>
+</body>
+</html>

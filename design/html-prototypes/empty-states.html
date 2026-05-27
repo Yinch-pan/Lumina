@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercury - 空状态</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+        }
+
+        .empty-state-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        justify-content: center;
+            height: 100vh;
+            padding: 40px;
+        }
+
+        .empty-icon {
+            font-size: 80px;
+            margin-bottom: 24px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+
+        .empty-description {
+         font-size: 14px;
+            color: #909399;
+            text-align: center;
+            line-height: 1.6;
+            max-width: 400px;
+            margin-bottom: 24px;
+        }
+
+        .empty-action {
+         display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+       padding: 12px 24px;
+            border: 1px solid #dcdfe6;
+            background: #ffffff;
+            border-radius: 4px;
+          cursor: pointer;
+            font-size: 14px;
+        transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #f5f7fa;
+            border-color: #409eff;
+            color: #409eff;
+        }
+
+        .btn-primary {
+         background: #409eff;
+            color: #ffffff;
+          border-color: #409eff;
+      }
+
+        .btn-primary:hover {
+         background: #66b1ff;
+     }
+
+        /* 三栏布局的空状态 */
+        .app-container {
+            display: flex;
+          height: 100vh;
+        }
+
+        .feed-sidebar {
+         width: 280px;
+            background: #ffffff;
+            border-right: 1px solid #e4e7ed;
+        }
+
+        .article-list {
+            width: 380px;
+            background: #ffffff;
+            border-right: 1px solid #e4e7ed;
+      }
+
+        .reader-view {
+            flex: 1;
+            background: #ffffff;
+        }
+
+        .empty-state-inline {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 40px;
+        }
+
+        .empty-state-inline .empty-icon {
+            font-size: 64px;
+        }
+
+      .empty-state-inline .empty-title {
+       font-size: 16px;
+        }
+
+        .empty-state-inline .empty-description {
+         font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 场景 1: 无订阅源（全屏空状态） -->
+    <div class="empty-state-container">
+        <div class="empty-icon">📰</div>
+      <div class="empty-title">还没有订阅源</div>
+        <div class="empty-description">
+            添加您感兴趣的 RSS 订阅源，开始获取最新资讯。<br>
+            您也可以从其他阅读器导入 OPML 文件。
+        </div>
+        <div class="empty-action">
+            <button class="btn btn-primary">+ 添加订阅源</button>
+            <button class="btn">导入 OPML</button>
+        </div>
+    </div>
+
+    <!-- 场景 2: 无文章（三栏布局中的空状态） -->
+    <!--
+    <div class="app-container">
+        <div class="feed-sidebar"></div>
+        <div class="article-list">
+       <div class="empty-state-inline">
+        <div class="empty-icon">📄</div>
+                <div class="empty-title">暂无文章</div>
+          <div class="empty-description">
+                 该订阅源还没有文章，<br>
+                 点击刷新按钮获取最新内容。
+                </div>
+                <div class="empty-action">
+                    <button class="btn btn-primary">刷新订阅源</button>
+              </div>
+            </div>
+     </div>
+        <div class="reader-view"></div>
+    </div>
+    -->
+
+    <!-- 场景 3: 未选择文章 -->
+    <!--
+    <div class="app-container">
+        <div class="feed-sidebar"></div>
+        <div class="article-list"></div>
+        <div class="reader-view">
+        <div class="empty-state-inline">
+          <div class="empty-icon">👈</div>
+             <div class="empty-title">选择一篇文章开始阅读</div>
+                <div class="empty-description">
+                从左侧列表中选择您感兴趣的文章
+              </div>
+            </div>
+        </div>
+    </div>
+    -->
+
+    <!-- 场景 4: 搜索无结果 -->
+    <!--
+    <div class="empty-state-container">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">未找到相关内容</div>
+        <div class="empty-description">
+            没有找到与 "关键词" 相关的文章，<br>
+            请尝试使用其他关键词搜索。
+        </div>
+        <div class="empty-action">
+            <button class="btn btn-primary">清除搜索</button>
+        </div>
+    </div>
+    -->
+
+    <!-- 场景 5: 标签筛选无结果 -->
+    <!--
+    <div class="empty-state-container">
+        <div class="empty-icon">🏷️</div>
+        <div class="empty-title">该标签下暂无文章</div>
+        <div class="empty-description">
+      还没有文章被标记为 "技术"，<br>
+            您可以给文章添加标签来整理内容。
+        </div>
+        <div class="empty-action">
+            <button class="btn btn-primary">查看所有文章</button>
+        </div>
+    </div>
+    -->
+</body>
+</html>

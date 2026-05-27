@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercury - 添加标签</title>
+    <style>
+        * {
+        margin: 0;
+            padding: 0;
+          box-sizing: border-box;
+        }
+
+     body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+     background: rgba(0, 0, 0, 0.5);
+          display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+      .dialog-overlay {
+        position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialog {
+          background: #ffffff;
+            border-radius: 8px;
+            width: 480px;
+            max-height: 80vh;
+            display: flex;
+          flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .dialog-header {
+          padding: 20px 24px;
+            border-bottom: 1px solid #e4e7ed;
+        }
+
+        .dialog-title {
+            font-size: 18px;
+            font-weight: 600;
+         color: #2c3e50;
+      }
+
+        .dialog-body {
+            padding: 24px;
+         flex: 1;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #606266;
+            margin-bottom: 12px;
+        }
+
+        .tag-list {
+          display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .tag-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        padding: 12px;
+            border: 1px solid #e4e7ed;
+            border-radius: 6px;
+            cursor: pointer;
+      transition: all 0.2s;
+        }
+
+        .tag-item:hover {
+       background: #f5f7fa;
+            border-color: #409eff;
+        }
+
+        .tag-item.selected {
+            background: #ecf5ff;
+         border-color: #409eff;
+        }
+
+        .tag-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+      }
+
+        .tag-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tag-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .tag-name {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .tag-count {
+            font-size: 12px;
+          color: #909399;
+        }
+
+        .new-tag-section {
+         padding-top: 16px;
+            border-top: 1px solid #e4e7ed;
+      }
+
+        .new-tag-input-group {
+          display: flex;
+            gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .form-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+         border-color: #409eff;
+        box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #c0c4cc;
+        }
+
+        .color-picker {
+            display: flex;
+         gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+      .color-option:hover {
+          transform: scale(1.1);
+        }
+
+        .color-option.selected {
+            border-color: #2c3e50;
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px currentColor;
+        }
+
+        .dialog-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e4e7ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .selected-count {
+       font-size: 13px;
+            color: #909399;
+     }
+
+        .footer-actions {
+            display: flex;
+       gap: 12px;
+        }
+
+        .btn {
+        padding: 10px 20px;
+            border: 1px solid #dcdfe6;
+            background: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+          font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #f5f7fa;
+      }
+
+        .btn-primary {
+            background: #409eff;
+        color: #ffffff;
+            border-color: #409eff;
+      }
+
+        .btn-primary:hover {
+            background: #66b1ff;
+        }
+
+        .btn-text {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+          color: #409eff;
+            cursor: pointer;
+            font-size: 13px;
+         transition: all 0.2s;
+        }
+
+        .btn-text:hover {
+       background: #ecf5ff;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar {
+          width: 8px;
+            height: 8px;
+        }
+
+     ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+      }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+     }
+    </style>
+</head>
+<body>
+    <div class="dialog-overlay">
+        <div class="dialog">
+            <div class="dialog-header">
+            <div class="dialog-title">添加标签</div>
+          </div>
+            <div class="dialog-body">
+                <!-- 现有标签列表 -->
+            <div class="section-title">选择现有标签</div>
+             <div class="tag-list">
+                    <div class="tag-item selected">
+                    <input type="checkbox" class="tag-checkbox" checked>
+                        <div class="tag-info">
+                            <div class="tag-color" style="background: #409eff;"></div>
+                       <span class="tag-name">技术</span>
+                   <span class="tag-count">(23)</span>
+                        </div>
+                </div>
+              <div class="tag-item">
+                     <input type="checkbox" class="tag-checkbox">
+                   <div class="tag-info">
+                  <div class="tag-color" style="background: #67c23a;"></div>
+                            <span class="tag-name">设计</span>
+        <span class="tag-count">(15)</span>
+                   </div>
+                    </div>
+                    <div class="tag-item">
+                        <input type="checkbox" class="tag-checkbox">
+                <div class="tag-info">
+                  <div class="tag-color" style="background: #e6a23c;"></div>
+                    <span class="tag-name">产品</span>
+                         <span class="tag-count">(8)</span>
+                  </div>
+                    </div>
+            <div class="tag-item selected">
+                  <input type="checkbox" class="tag-checkbox" checked>
+              <div class="tag-info">
+                  <div class="tag-color" style="background: #f56c6c;"></div>
+                       <span class="tag-name">AI</span>
+                   <span class="tag-count">(31)</span>
+                 </div>
+                </div>
+                    <div class="tag-item">
+                    <input type="checkbox" class="tag-checkbox">
+                        <div class="tag-info">
+                         <div class="tag-color" style="background: #909399;"></div>
+                     <span class="tag-name">阅读</span>
+                  <span class="tag-count">(12)</span>
+                      </div>
+          </div>
+                </div>
+
+                <!-- 新建标签 -->
+                <div class="new-tag-section">
+              <div class="section-title">或创建新标签</div>
+               <div class="new-tag-input-group">
+              <input type="text" class="form-input" placeholder="输入标签名称">
+                    <button class="btn-text">+ 创建</button>
+                </div>
+             <div class="color-picker">
+                <div class="color-option selected" style="background: #409eff;" title="蓝色"></div>
+                  <div class="color-option" style="background: #67c23a;" title="绿色"></div>
+                  <div class="color-option" style="background: #e6a23c;" title="橙色"></div>
+                   <div class="color-option" style="background: #f56c6c;" title="红色"></div>
+               <div class="color-option" style="background: #909399;" title="灰色"></div>
+                 <div class="color-option" style="background: #c71585;" title="紫色"></div>
+                        <div class="color-option" style="background: #00bcd4;" title="青色"></div>
+                        <div class="color-option" style="background: #ff9800;" title="琥珀色"></div>
+                    </div>
+            </div>
+    </div>
+       <div class="dialog-footer">
+                <div class="selected-count">已选择 2 个标签</div>
+              <div class="footer-actions">
+                    <button class="btn" onclick="window.location.href='main-interface-complete.html'">取消</button>
+              <button class="btn btn-primary" onclick="window.location.href='main-interface-complete.html'">确定</button>
+              </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 标签项点击切换选中状态
+     document.querySelectorAll('.tag-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+                if (e.target.classList.contains('tag-checkbox')) return;
+                const checkbox = this.querySelector('.tag-checkbox');
+                checkbox.checked = !checkbox.checked;
+              this.classList.toggle('selected');
+              updateSelectedCount();
+        });
+        });
+
+        // 复选框点击
+        document.querySelectorAll('.tag-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+              this.closest('.tag-item').classList.toggle('selected', this.checked);
+                updateSelectedCount();
+            });
+        });
+
+     // 颜色选择
+    document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+            document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+              this.classList.add('selected');
+            });
+        });
+
+      // 更新选中数量
+        function updateSelectedCount() {
+            const count = document.querySelectorAll('.tag-checkbox:checked').length;
+            document.querySelector('.selected-count').textContent = `已选择 ${count} 个标签`;
+        }
+
+        // 创建新标签
+        document.querySelector('.btn-text').addEventListener('click', function() {
+          const input = document.querySelector('.new-tag-input-group .form-input');
+            const tagName = input.value.trim();
+            if (!tagName) {
+              alert('请输入标签名称');
+                return;
+            }
+
+            const selectedColor = document.querySelector('.color-option.selected');
+            const color = selectedColor.style.background;
+
+            // 创建新标签项
+            const tagList = document.querySelector('.tag-list');
+            const newTag = document.createElement('div');
+         newTag.className = 'tag-item selected';
+            newTag.innerHTML = `
+          <input type="checkbox" class="tag-checkbox" checked>
+              <div class="tag-info">
+               <div class="tag-color" style="background: ${color};"></div>
+              <span class="tag-name">${tagName}</span>
+           <span class="tag-count">(0)</span>
+        </div>
+            `;
+          tagList.appendChild(newTag);
+
+            // 重新绑定事件
+            newTag.addEventListener('click', function(e) {
+            if (e.target.classList.contains('tag-checkbox')) return;
+                const checkbox = this.querySelector('.tag-checkbox');
+                checkbox.checked = !checkbox.checked;
+             this.classList.toggle('selected');
+             updateSelectedCount();
+          });
+
+            newTag.querySelector('.tag-checkbox').addEventListener('change', function() {
+           this.closest('.tag-item').classList.toggle('selected', this.checked);
+           updateSelectedCount();
+            });
+
+            // 清空输入框
+        input.value = '';
+            updateSelectedCount();
+
+            // 滚动到新标签
+            tagList.scrollTop = tagList.scrollHeight;
+        });
+
+        // 回车创建标签
+        document.querySelector('.new-tag-input-group .form-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('.btn-text').click();
+            }
+        });
+    </script>
+</body>
+</html>
