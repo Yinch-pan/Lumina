@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <TitleBar />
+    <TitleBar @open-settings="showSettings = true" />
     <div class="main-content">
       <FeedSidebar
         :feeds="feeds"
@@ -25,6 +25,9 @@
         @export="handleExport"
       />
     </div>
+
+    <!-- 设置页面 -->
+    <SettingsView v-if="showSettings" @close="showSettings = false" />
   </div>
 </template>
 
@@ -34,6 +37,7 @@ import TitleBar from './components/TitleBar.vue'
 import FeedSidebar from './components/FeedSidebar.vue'
 import ArticleList from './components/ArticleList.vue'
 import ReaderView from './components/ReaderView.vue'
+import SettingsView from './components/SettingsView.vue'
 
 // Mock 数据
 const feeds = ref([
@@ -110,6 +114,7 @@ const mockArticleContent = {
 const selectedFeedId = ref('1')
 const selectedTag = ref('全部')
 const selectedArticleId = ref('1')
+const showSettings = ref(false)
 
 const articles = computed(() => {
   return mockArticles.filter(a => a.feedId === selectedFeedId.value)
