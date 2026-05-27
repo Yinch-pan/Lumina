@@ -1,0 +1,43 @@
+# Electron 下载镜像配置
+
+## 如果 Electron 下载很慢
+
+可以配置使用国内镜像：
+
+### 方法 1：设置环境变量（临时）
+
+```bash
+export ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+npm install
+```
+
+### 方法 2：配置 npm（永久）
+
+```bash
+npm config set electron_mirror https://npmmirror.com/mirrors/electron/
+```
+
+### 方法 3：在 .npmrc 文件中配置
+
+在项目根目录创建 `.npmrc` 文件：
+
+```
+electron_mirror=https://npmmirror.com/mirrors/electron/
+```
+
+## 其他可用镜像
+
+- 淘宝镜像：`https://npmmirror.com/mirrors/electron/`
+- 华为镜像：`https://repo.huaweicloud.com/electron/`
+
+## 验证下载
+
+下载完成后，Electron 二进制文件会缓存在：
+```
+~/.cache/electron/
+```
+
+可以查看：
+```bash
+ls -lh ~/.cache/electron/
+```
