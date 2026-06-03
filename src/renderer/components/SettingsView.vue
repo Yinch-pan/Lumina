@@ -22,31 +22,36 @@
             v-model="llmConfig.baseUrl"
           />
           <div class="form-hint">支持 OpenAI、Azure OpenAI、本地模型等</div>
-      </div>
+        </div>
 
         <div class="form-group">
           <label class="form-label">API Key</label>
           <input
             type="password"
-          class="form-input"
-          placeholder="sk-..."
+            class="form-input"
+            placeholder="sk-..."
             v-model="llmConfig.apiKey"
           />
           <div class="form-hint">您的 API Key 将安全存储在本地</div>
         </div>
 
         <div class="form-group">
-        <label class="form-label">Model</label>
+          <label class="form-label">Model</label>
           <input
-        type="text"
+            type="text"
             class="form-input"
             placeholder="gpt-4"
             v-model="llmConfig.model"
-        />
-        <div class="form-hint">例如：gpt-4, gpt-3.5-turbo, claude-3-opus</div>
+          />
+          <div class="form-hint">例如：gpt-4, gpt-3.5-turbo, claude-3-opus</div>
         </div>
 
-        <button class="btn-primary" @click="saveLLMConfig">保存 LLM 配置</button>
+        <div class="btn-row">
+          <button class="btn-primary" @click="saveLLMConfig" :disabled="saving">
+            {{ saving ? '保存中...' : '保存 LLM 配置' }}
+          </button>
+          <span v-if="llmSaveMsg" class="save-msg">{{ llmSaveMsg }}</span>
+        </div>
       </div>
 
       <!-- 阅读设置 -->
@@ -56,23 +61,23 @@
         <div class="form-group">
           <label class="form-label">字体大小</label>
           <select class="form-select" v-model="readingSettings.fontSize">
-          <option value="14">小 (14px)</option>
+            <option value="14">小 (14px)</option>
             <option value="16">中 (16px)</option>
             <option value="18">大 (18px)</option>
             <option value="20">特大 (20px)</option>
-        </select>
-        </div>
-
-        <div class="form-group">
-        <label class="form-label">行距</label>
-          <select class="form-select" v-model="readingSettings.lineHeight">
-            <option value="1.5">紧凑 (1.5)</option>
-            <option value="1.8">标准 (1.8)</option>
-        <option value="2.0">宽松 (2.0)</option>
           </select>
         </div>
 
-     <div class="form-group">
+        <div class="form-group">
+          <label class="form-label">行距</label>
+          <select class="form-select" v-model="readingSettings.lineHeight">
+            <option value="1.5">紧凑 (1.5)</option>
+            <option value="1.8">标准 (1.8)</option>
+            <option value="2.0">宽松 (2.0)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">主题</label>
           <select class="form-select" v-model="readingSettings.theme">
             <option value="light">浅色</option>
@@ -80,19 +85,33 @@
           </select>
         </div>
 
-        <button class="btn-primary" @click="saveReadingSettings">保存阅读设置</button>
+        <div class="btn-row">
+          <button class="btn-primary" @click="saveReadingSettings" :disabled="savingReading">
+            {{ savingReading ? '保存中...' : '保存阅读设置' }}
+          </button>
+          <span v-if="readingSaveMsg" class="save-msg">{{ readingSaveMsg }}</span>
+        </div>
       </div>
 
-    <!-- 应用信息 -->
+      <!-- 标签管理 -->
       <div class="settings-section">
-      <h2 class="section-title">ℹ️ 关于 Mercury</h2>
+        <h2 class="section-title">🏷️ 标签管理</h2>
+        <div class="section-description">
+          管理所有标签，支持创建、重命名和删除
+        </div>
+        <TagManager />
+      </div>
+
+      <!-- 应用信息 -->
+      <div class="settings-section">
+        <h2 class="section-title">ℹ️ 关于 Mercury</h2>
         <div class="info-item">
           <span class="info-label">版本</span>
-       <span class="info-value">1.0.0 (Demo)</span>
-      </div>
+          <span class="info-value">1.0.0 (Demo)</span>
+        </div>
         <div class="info-item">
           <span class="info-label">数据目录</span>
-        <span class="info-value">~/.local/share/mercury/</span>
+          <span class="info-value">~/.local/share/mercury/</span>
         </div>
         <div class="info-item">
           <span class="info-label">GitHub</span>
@@ -106,7 +125,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import TagManager from './TagManager.vue'
+
+const api = (window as any).electronAPI
 
 defineEmits<{
   'close': []
@@ -124,12 +146,61 @@ const readingSettings = ref({
   theme: 'light'
 })
 
-const saveLLMConfig = () => {
-  alert('LLM 配置保存功能（占位）\n\n实际功能将在模块 D 中实现')
+const saving = ref(false)
+const savingReading = ref(false)
+const llmSaveMsg = ref('')
+const readingSaveMsg = ref('')
+
+onMounted(async () => {
+  // 加载 LLM 配置
+  try {
+    const config = await api.getLLMConfig()
+    llmConfig.value = config
+  } catch (_e) {
+    // 首次使用时可能没有配置
+  }
+
+  // 加载阅读设置
+  try {
+    const fontSize = await api.getSetting('reading_font_size')
+    const lineHeight = await api.getSetting('reading_line_height')
+    const theme = await api.getSetting('reading_theme')
+    if (fontSize) readingSettings.value.fontSize = fontSize
+    if (lineHeight) readingSettings.value.lineHeight = lineHeight
+    if (theme) readingSettings.value.theme = theme
+  } catch (_e) {
+    // 使用默认值
+  }
+})
+
+const saveLLMConfig = async () => {
+  saving.value = true
+  llmSaveMsg.value = ''
+  try {
+    await api.saveLLMConfig(llmConfig.value)
+    llmSaveMsg.value = '✅ 已保存'
+    setTimeout(() => { llmSaveMsg.value = '' }, 2000)
+  } catch (e: any) {
+    llmSaveMsg.value = `❌ ${e.message || '保存失败'}`
+  } finally {
+    saving.value = false
+  }
 }
 
-const saveReadingSettings = () => {
-  alert('阅读设置保存功能（占位）\n\n实际功能将在模块 D 中实现')
+const saveReadingSettings = async () => {
+  savingReading.value = true
+  readingSaveMsg.value = ''
+  try {
+    await api.saveSetting('reading_font_size', readingSettings.value.fontSize)
+    await api.saveSetting('reading_line_height', readingSettings.value.lineHeight)
+    await api.saveSetting('reading_theme', readingSettings.value.theme)
+    readingSaveMsg.value = '✅ 已保存'
+    setTimeout(() => { readingSaveMsg.value = '' }, 2000)
+  } catch (e: any) {
+    readingSaveMsg.value = `❌ ${e.message || '保存失败'}`
+  } finally {
+    savingReading.value = false
+  }
 }
 </script>
 
@@ -240,6 +311,12 @@ const saveReadingSettings = () => {
   margin-top: 6px;
 }
 
+.btn-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .btn-primary {
   padding: 10px 20px;
   background: #409eff;
@@ -254,6 +331,16 @@ const saveReadingSettings = () => {
 
 .btn-primary:hover {
   background: #66b1ff;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-msg {
+  font-size: 13px;
+  color: #67c23a;
 }
 
 .info-item {

@@ -1,32 +1,52 @@
 <template>
   <div class="reader-view">
     <div v-if="article" class="reader-container">
-    <div class="reader-header">
+      <div class="reader-header">
         <h1 class="reader-title">{{ article.title }}</h1>
         <div class="reader-meta">
           <span v-if="article.author">{{ article.author }}</span>
           <span>{{ article.publishedAt }}</span>
-     <a :href="article.sourceUrl" target="_blank" class="source-link">查看原文</a>
+          <a :href="article.sourceUrl" target="_blank" class="source-link">查看原文</a>
         </div>
+
+        <!-- 标签区域 -->
+        <div class="reader-tags-section">
+          <div class="reader-tags">
+            <span
+              v-for="tag in article.tags"
+              :key="tag"
+              class="reader-tag"
+            >
+              {{ tag }}
+              <button class="tag-remove-btn" @click="$emit('remove-tag', tag)" title="移除标签">×</button>
+            </span>
+          </div>
+          <div class="tag-input-wrap">
+            <input
+              v-model="newTagName"
+              type="text"
+              class="tag-input"
+              placeholder="输入标签名回车添加..."
+              @keydown.enter="handleAddTag"
+            />
+          </div>
+        </div>
+
         <div class="reader-actions">
           <button class="action-btn" @click="$emit('summarize')">
             <span>📝</span>
-          <span>AI 摘要</span>
+            <span>AI 摘要</span>
           </button>
           <button class="action-btn" @click="$emit('translate')">
-       <span>🌐</span>
-      <span>AI 翻译</span>
-        </button>
-          <button class="action-btn" @click="$emit('add-tag')">
-            <span>🏷️</span>
-            <span>添加标签</span>
+            <span>🌐</span>
+            <span>AI 翻译</span>
           </button>
-          <button class="action-btn" @click="$emit('export')">
-        <span>📤</span>
-          <span>导出</span>
+          <button class="action-btn" @click="handleExport">
+            <span>📤</span>
+            <span>导出 Markdown</span>
           </button>
+        </div>
       </div>
-   </div>
 
       <div class="reader-content">
         <div class="content-section">
@@ -42,12 +62,13 @@
           <div v-if="article.translation" class="ai-section">
             <div class="ai-section-header">
               <div class="ai-section-title">🌐 AI 翻译</div>
-        </div>
+            </div>
             <div class="ai-content">{{ article.translation }}</div>
           </div>
+
           <!-- 文章正文 -->
           <div class="article-content" v-html="article.cleanedHtml"></div>
-     </div>
+        </div>
       </div>
     </div>
 
@@ -59,7 +80,11 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { ref } from 'vue'
+
+const api = (window as any).electronAPI
+
+const props = defineProps<{
   article: {
     id: string
     title: string
@@ -73,12 +98,40 @@ defineProps<{
   } | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'summarize': []
   'translate': []
-  'add-tag': []
+  'add-tag': [tagName: string]
+  'remove-tag': [tagName: string]
   'export': []
+  'tag-changed': []
 }>()
+
+const newTagName = ref('')
+
+const handleAddTag = () => {
+  const name = newTagName.value.trim()
+  if (!name || !props.article) return
+  emit('add-tag', name)
+  newTagName.value = ''
+}
+
+const handleExport = async () => {
+  if (!props.article) return
+  try {
+    const result = await api.showSaveDialog({
+      title: '导出 Markdown',
+      defaultPath: `${props.article.title.replace(/[<>:"/\\|?*]/g, '_').slice(0, 60)}.md`,
+      filters: [{ name: 'Markdown', extensions: ['md'] }]
+    })
+    if (result && !result.canceled && result.filePath) {
+      await api.exportMarkdown(props.article.id, result.filePath)
+      alert('✅ 导出成功！')
+    }
+  } catch (e: any) {
+    alert(`导出失败: ${e.message || e}`)
+  }
+}
 </script>
 
 <style scoped>
@@ -105,7 +158,7 @@ defineEmits<{
   font-size: 24px;
   font-weight: 600;
   line-height: 1.4;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .reader-meta {
@@ -113,7 +166,7 @@ defineEmits<{
   gap: 16px;
   font-size: 13px;
   color: #909399;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .source-link {
@@ -123,6 +176,67 @@ defineEmits<{
 
 .source-link:hover {
   text-decoration: underline;
+}
+
+/* 标签区域 */
+.reader-tags-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.reader-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reader-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #f0f9ff;
+  color: #409eff;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.tag-remove-btn {
+  border: none;
+  background: none;
+  color: #409eff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.tag-remove-btn:hover {
+  opacity: 1;
+  color: #f56c6c;
+}
+
+.tag-input-wrap {
+  flex-shrink: 0;
+}
+
+.tag-input {
+  padding: 4px 10px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 12px;
+  font-size: 12px;
+  width: 160px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.tag-input:focus {
+  border-color: #409eff;
+  border-style: solid;
 }
 
 .reader-actions {
