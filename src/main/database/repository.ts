@@ -1,15 +1,15 @@
-import Database from 'better-sqlite3'
 import { initDatabase } from './init'
-import { Tag, Article, ArticleContent, LLMConfig } from '../types'
+import { BetterSqlite3Compat } from './sqlite-wrapper'
+import { Tag, Article, LLMConfig } from '../types'
 import crypto from 'crypto'
 
 function generateId(): string {
   return crypto.randomUUID()
 }
 
-let _db: Database.Database | null = null
+let _db: BetterSqlite3Compat | null = null
 
-export function getDatabase(): Database.Database {
+export function getDatabase(): BetterSqlite3Compat {
   if (!_db) {
     _db = initDatabase()
   }
@@ -90,6 +90,13 @@ export function selectEntriesByTagId(tagId: string): string[] {
 
 // ───────────────────── Entries / Articles ─────────────────────
 
+function formatTimestamp(ts: number | null | undefined): string {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export function selectEntryById(entryId: string): (Article & { url: string; cleanedMarkdown?: string; cleanedHtml?: string; summary?: string; translation?: string }) | null {
   const db = getDatabase()
   const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as any
@@ -116,7 +123,7 @@ export function selectEntryById(entryId: string): (Article & { url: string; clea
     feedId: entry.feed_id,
     title: entry.title,
     author: entry.author,
-    publishedAt: entry.published_at ? new Date(entry.published_at).toISOString() : '',
+    publishedAt: formatTimestamp(entry.published_at),
     excerpt: entry.excerpt || '',
     isRead: entry.is_read === 1,
     tags: tags.map(t => t.name),
@@ -136,7 +143,7 @@ export function selectAllEntries(): Article[] {
     feedId: entry.feed_id,
     title: entry.title,
     author: entry.author,
-    publishedAt: entry.published_at ? new Date(entry.published_at).toISOString() : '',
+    publishedAt: formatTimestamp(entry.published_at),
     excerpt: entry.excerpt || '',
     isRead: entry.is_read === 1,
     tags: selectTagsByEntryId(entry.id).map(t => t.name)
@@ -151,11 +158,25 @@ export function selectEntriesByFeedId(feedId: string): Article[] {
     feedId: entry.feed_id,
     title: entry.title,
     author: entry.author,
-    publishedAt: entry.published_at ? new Date(entry.published_at).toISOString() : '',
+    publishedAt: formatTimestamp(entry.published_at),
     excerpt: entry.excerpt || '',
     isRead: entry.is_read === 1,
     tags: selectTagsByEntryId(entry.id).map(t => t.name)
   }))
+}
+
+export function selectTagsByFeedId(feedId: string): Tag[] {
+  const db = getDatabase()
+  const rows = db.prepare(`
+    SELECT DISTINCT t.id, t.name, COUNT(et.entry_id) as count
+    FROM tags t
+    INNER JOIN entry_tags et ON t.id = et.tag_id
+    INNER JOIN entries e ON et.entry_id = e.id
+    WHERE e.feed_id = ?
+    GROUP BY t.id, t.name
+    ORDER BY t.name
+  `).all(feedId) as Array<{ id: string; name: string; count: number }>
+  return rows
 }
 
 // ───────────────────── Settings ─────────────────────

@@ -3,6 +3,9 @@ import * as path from 'path'
 import { TagService } from './services/TagService'
 import { ExportService } from './services/ExportService'
 import { SettingsService } from './services/SettingsService'
+import { initSqlJsWrapper } from './database/sqlite-wrapper'
+import { seedMockData } from './database/seed-mock'
+import { selectEntryById, selectAllEntries, selectEntriesByFeedId, selectTagsByFeedId } from './database/repository'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -41,9 +44,26 @@ function createWindow() {
 // ───────────────────── 注册 IPC Handlers ─────────────────────
 
 function registerIpcHandlers() {
+  // ── 文章数据（从数据库获取） ──
+  ipcMain.handle('get-all-articles', async () => {
+    return selectAllEntries()
+  })
+
+  ipcMain.handle('get-articles-by-feed', async (_event, feedId: string) => {
+    return selectEntriesByFeedId(feedId)
+  })
+
+  ipcMain.handle('get-article-detail', async (_event, articleId: string) => {
+    return selectEntryById(articleId)
+  })
+
   // ── 标签服务 ──
   ipcMain.handle('get-all-tags', async () => {
     return await tagService.getAllTags()
+  })
+
+  ipcMain.handle('get-tags-by-feed', async (_event, feedId: string) => {
+    return selectTagsByFeedId(feedId)
   })
 
   ipcMain.handle('create-tag', async (_event, name: string) => {
@@ -113,7 +133,11 @@ function registerIpcHandlers() {
 
 // ───────────────────── App Lifecycle ─────────────────────
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // 初始化 sql.js WASM（必须在数据库操作之前）
+  await initSqlJsWrapper()
+  seedMockData()
+
   registerIpcHandlers()
   createWindow()
 

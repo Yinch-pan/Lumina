@@ -1,15 +1,15 @@
-import Database from 'better-sqlite3'
 import * as path from 'path'
 import { app } from 'electron'
+import { BetterSqlite3Compat } from './sqlite-wrapper'
 
 /**
  * 数据库初始化脚本
  * 定义所有表结构
  */
 
-export function initDatabase(): Database.Database {
+export function initDatabase(): BetterSqlite3Compat {
   const dbPath = path.join(app.getPath('userData'), 'mercury.db')
-  const db = new Database(dbPath)
+  const db = new BetterSqlite3Compat(dbPath)
 
   // 创建 feeds 表
   db.exec(`
@@ -49,7 +49,7 @@ export function initDatabase(): Database.Database {
       raw_html TEXT,
       cleaned_html TEXT,
       cleaned_markdown TEXT,
-    fetched_at INTEGER,
+      fetched_at INTEGER,
       FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
     )
   `)
@@ -79,11 +79,11 @@ export function initDatabase(): Database.Database {
   db.exec(`
     CREATE TABLE IF NOT EXISTS agent_runs (
       id TEXT PRIMARY KEY,
-    entry_id TEXT NOT NULL,
+      entry_id TEXT NOT NULL,
       agent_type TEXT NOT NULL,
       input_text TEXT,
       output_text TEXT,
-    status TEXT NOT NULL,
+      status TEXT NOT NULL,
       error_message TEXT,
       started_at INTEGER NOT NULL,
       completed_at INTEGER,
@@ -95,7 +95,7 @@ export function initDatabase(): Database.Database {
   db.exec(`
     CREATE TABLE IF NOT EXISTS llm_usage (
       id TEXT PRIMARY KEY,
-   agent_run_id TEXT NOT NULL,
+      agent_run_id TEXT NOT NULL,
       model TEXT NOT NULL,
       prompt_tokens INTEGER,
       completion_tokens INTEGER,

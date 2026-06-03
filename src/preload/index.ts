@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // ── 文章数据 ──
+  getAllArticles: () => ipcRenderer.invoke('get-all-articles'),
+  getArticlesByFeed: (feedId: string) => ipcRenderer.invoke('get-articles-by-feed', feedId),
+  getArticleDetail: (articleId: string) => ipcRenderer.invoke('get-article-detail', articleId),
+
   // ── Feed（模块 A 占位，后续替换） ──
   getFeedList: () => ipcRenderer.invoke('get-feed-list'),
   getArticleList: (feedId: string) => ipcRenderer.invoke('get-article-list', feedId),
@@ -14,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ── 标签服务 (模块 D) ──
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
+  getTagsByFeed: (feedId: string) => ipcRenderer.invoke('get-tags-by-feed', feedId),
   createTag: (name: string) => ipcRenderer.invoke('create-tag', name),
   deleteTag: (tagId: string) => ipcRenderer.invoke('delete-tag', tagId),
   updateTag: (tagId: string, newName: string) => ipcRenderer.invoke('update-tag', tagId, newName),

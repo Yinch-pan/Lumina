@@ -24,7 +24,6 @@
   },
   "homepage": "https://github.com/Yinch-pan/Mercury#readme",
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.1",
     "@vitejs/plugin-vue": "^6.0.7",
     "electron": "^42.3.2",
@@ -34,12 +33,12 @@
     "vue": "^3.5.34"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.0",
     "fast-xml-parser": "^5.8.0",
     "lucide-vue-next": "^0.460.0",
     "node-fetch": "^3.3.2",
     "rss-parser": "^3.13.0",
     "sanitize-html": "^2.17.4",
+    "sql.js": "^1.14.1",
     "turndown": "^7.2.4"
   }
 }

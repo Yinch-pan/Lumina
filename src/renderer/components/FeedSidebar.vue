@@ -8,16 +8,24 @@
     </div>
 
     <div class="sidebar-filters">
-      <div class="filter-label">按标签筛选</div>
+      <div class="filter-label">按标签筛选（可多选）</div>
       <div class="tag-filter">
         <span
           v-for="tag in tags"
-       :key="tag.id"
+          :key="tag.id"
           class="tag-chip"
-       :class="{ active: tag.name === selectedTag }"
+          :class="{ active: selectedTags.includes(tag.name) }"
           @click="$emit('select-tag', tag.name)"
         >
+          <span class="tag-checkbox">
+            <input
+              type="checkbox"
+              :checked="selectedTags.includes(tag.name)"
+              @click.stop="$emit('select-tag', tag.name)"
+            />
+          </span>
           {{ tag.name }}
+          <span class="tag-count">({{ tag.count }})</span>
         </span>
       </div>
     </div>
@@ -45,7 +53,7 @@ defineProps<{
   feeds: Array<{ id: string; title: string; url: string; unreadCount: number }>
   selectedFeedId: string
   tags: Array<{ id: string; name: string; count: number }>
-  selectedTag: string
+  selectedTags: string[]
 }>()
 
 defineEmits<{
@@ -120,6 +128,9 @@ defineEmits<{
 }
 
 .tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 10px;
   background: #f4f4f5;
   border-radius: 12px;
@@ -129,13 +140,30 @@ defineEmits<{
   transition: all 0.2s;
 }
 .tag-chip:hover {
-  background: #409eff;
-  color: #ffffff;
+  background: #e0e0e0;
 }
 
 .tag-chip.active {
   background: #409eff;
   color: #ffffff;
+}
+
+.tag-checkbox {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tag-checkbox input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #409eff;
+}
+
+.tag-count {
+  font-size: 10px;
+  opacity: 0.8;
 }
 
 .feed-list {
