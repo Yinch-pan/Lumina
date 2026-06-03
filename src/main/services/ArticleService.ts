@@ -1,5 +1,6 @@
 import { Repository } from '../database/repository'
 import { Article, ArticleContent } from '../types'
+import { CleaningService } from './CleaningService'
 import { IArticleService } from './interfaces'
 
 type FetchText = (url: string) => Promise<string>
@@ -9,7 +10,8 @@ const DEFAULT_USER_AGENT = 'Mercury/1.0 RSS Reader'
 export class ArticleService implements IArticleService {
   constructor(
     private readonly repository: Repository,
-    private readonly fetchText: FetchText = defaultFetchText
+    private readonly fetchText: FetchText = defaultFetchText,
+    private readonly cleaningService = new CleaningService()
   ) {}
 
   async getArticlesByFeed(feedId: string): Promise<Article[]> {
@@ -46,6 +48,18 @@ export class ArticleService implements IArticleService {
         rawHtml,
         cleanedHtml: null,
         cleanedMarkdown: null,
+        fetchedAt: Date.now()
+      })
+      content = this.repository.getArticleContent(articleId)
+    }
+
+    if (content?.rawHtml && (!content.cleanedHtml || !content.cleanedMarkdown)) {
+      const cleaned = await this.cleaningService.clean(content.rawHtml, entry.url)
+      this.repository.upsertEntryContent({
+        entryId: articleId,
+        rawHtml: content.rawHtml,
+        cleanedHtml: cleaned.cleanedHtml,
+        cleanedMarkdown: cleaned.cleanedMarkdown,
         fetchedAt: Date.now()
       })
       content = this.repository.getArticleContent(articleId)

@@ -55,6 +55,13 @@ export interface ArticleContent {
   tags: string[]
 }
 
+export interface CleanedContent {
+  cleanedHtml: string
+  cleanedMarkdown: string
+  title?: string
+  author?: string
+}
+
 export interface Tag {
   id: string
   name: string
