@@ -3,6 +3,7 @@ import * as path from 'path'
 import { initDatabase } from './database/init'
 import { Repository } from './database/repository'
 import { ArticleService } from './services/ArticleService'
+import { CleaningService } from './services/CleaningService'
 import { FeedService } from './services/FeedService'
 import { OpmlFeed } from './types'
 
@@ -121,8 +122,9 @@ function registerIpcHandlers() {
 function initializeServices() {
   const database = initDatabase()
   const repository = new Repository(database)
+  const cleaningService = new CleaningService(repository)
   feedService = new FeedService(repository)
-  articleService = new ArticleService(repository)
+  articleService = new ArticleService(repository, cleaningService)
   startAutoRefreshScheduler()
 }
 

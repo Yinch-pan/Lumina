@@ -1,6 +1,6 @@
 import { Repository } from '../database/repository'
 import { Article, ArticleContent } from '../types'
-import { IArticleService } from './interfaces'
+import { IArticleService, ICleaningService } from './interfaces'
 
 type FetchText = (url: string) => Promise<string>
 
@@ -9,6 +9,7 @@ const DEFAULT_USER_AGENT = 'Mercury/1.0 RSS Reader'
 export class ArticleService implements IArticleService {
   constructor(
     private readonly repository: Repository,
+    private readonly cleaningService: ICleaningService,
     private readonly fetchText: FetchText = defaultFetchText
   ) {}
 
@@ -39,20 +40,14 @@ export class ArticleService implements IArticleService {
       throw new Error(`Article content cannot be loaded: ${articleId}`)
     }
 
-    if (!content.rawHtml) {
-      const rawHtml = await this.fetchText(entry.url)
-      this.repository.upsertEntryContent({
-        entryId: articleId,
-        rawHtml,
-        cleanedHtml: null,
-        cleanedMarkdown: null,
-        fetchedAt: Date.now()
-      })
+    // 如果没有清洗后的 HTML，则调用 CleaningService 进行清洗
+    if (!content.cleanedHtml) {
+      const cleaned = await this.cleaningService.cleanArticle(articleId, entry.url)
       content = this.repository.getArticleContent(articleId)
     }
 
     if (!content) {
-      throw new Error(`Article content cannot be loaded after fetch: ${articleId}`)
+      throw new Error(`Article content cannot be loaded after cleaning: ${articleId}`)
     }
 
     return content
