@@ -8,3 +8,6 @@ dist
 
 # LLM config with API key
 src/main/llm/config.json
+# Release builds
+release/
+dist/
