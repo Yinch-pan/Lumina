@@ -18,7 +18,7 @@ function createWindow() {
     minWidth: 1200,
     minHeight: 700,
     webPreferences: {
-      preload: path.join(__dirname, 'preload/index.js'),
+      preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true
     },
@@ -26,9 +26,8 @@ function createWindow() {
     frame: false
   })
 
-  if (process.argv.includes('--dev')) {
-    const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173'
-    mainWindow.loadURL(devUrl)
+  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
     mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))

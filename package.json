@@ -2,14 +2,15 @@
   "name": "mercury",
   "version": "1.0.0",
   "description": "Mercury 是一个跨平台、本地优先、AI 增强型 RSS 阅读器。",
-  "main": "dist/main/index.js",
+  "main": "out/main/index.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "dev:renderer": "vite",
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json",
-    "build": "npm run build:renderer && npm run build:main",
-    "start": "electron .",
-    "dev:electron": "npm run build:main && electron . --dev"
+    "start": "electron ."
   },
   "repository": {
     "type": "git",
@@ -26,7 +27,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.1",
     "@vitejs/plugin-vue": "^6.0.7",
-    "electron": "^42.3.0",
+    "electron": "^28.3.3",
     "electron-vite": "^5.0.0",
     "typescript": "^6.0.3",
     "vite": "^7.3.3",
