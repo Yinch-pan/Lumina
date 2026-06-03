@@ -58,12 +58,17 @@
       :filePath="opmlFilePath"
       :feeds="opmlPreviewFeeds"
       :progress="opmlImportProgress"
-      :isLoading="isImportingOpml"
-      :error="opmlDialogError"
+    :isLoading="isImportingOpml"
+  :error="opmlDialogError"
       @close="closeOpmlDialog"
       @select-file="selectOpmlFile"
       @file-dropped="previewDroppedOpmlFile"
       @import="importSelectedOpmlFeeds"
+    />
+    <TagDialog
+      v-if="showTagDialog"
+      @close="showTagDialog = false"
+      @confirm="handleTagConfirm"
     />
   </div>
 </template>
@@ -78,6 +83,7 @@ import SettingsView from './components/SettingsView.vue'
 import AddSubscriptionDialog from './components/AddSubscriptionDialog.vue'
 import EditSubscriptionDialog from './components/EditSubscriptionDialog.vue'
 import OpmlImportDialog from './components/OpmlImportDialog.vue'
+import TagDialog from './components/TagDialog.vue'
 import type { Article, ArticleContent, Feed, OpmlFeed, Tag } from '../main/types'
 import type { ArticleFilter } from './components/ArticleList.vue'
 
@@ -168,6 +174,7 @@ const selectedArticleId = ref('1')
 const selectedArticleContent = ref<ArticleContent | null>(mockArticleContent)
 const articleList = ref<Article[]>(mockArticles)
 const showSettings = ref(false)
+const showTagDialog = ref(false)
 const useMockData = ref(true)
 const articleFilter = ref<ArticleFilter>('all')
 const isLoadingArticles = ref(false)
@@ -639,23 +646,34 @@ const handleTranslate = () => {
   alert('AI 翻译功能（占位）')
 }
 
-const handleAddTag = async () => {
+const handleAddTag = () => {
+  console.log('handleAddTag called', {
+    hasElectronAPI: !!window.electronAPI,
+    selectedArticleId: selectedArticleId.value
+  })
+
   if (!window.electronAPI || !selectedArticleId.value) {
-    alert('当前环境不支持添加标签')
+    alert('当前环境不支持添加标签或未选择文章')
     return
   }
 
-  const tagName = prompt('请输入标签名称：')
-  if (!tagName || !tagName.trim()) {
+  showTagDialog.value = true
+}
+
+const handleTagConfirm = async (tagName: string) => {
+  showTagDialog.value = false
+
+  if (!window.electronAPI || !selectedArticleId.value) {
     return
   }
 
   try {
-    await window.electronAPI.addTagToArticle(selectedArticleId.value, tagName.trim())
+    await window.electronAPI.addTagToArticle(selectedArticleId.value, tagName)
     // 重新加载文章内容以获取更新后的标签
     selectedArticleContent.value = await window.electronAPI.getArticleContent(selectedArticleId.value)
     // 重新加载文章列表以更新标签
     articleList.value = await window.electronAPI.getArticleList(selectedFeedId.value)
+    alert('标签添加成功')
   } catch (error) {
     console.error('Failed to add tag', error)
     alert(`添加标签失败：${error instanceof Error ? error.message : String(error)}`)

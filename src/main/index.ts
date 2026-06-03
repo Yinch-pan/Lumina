@@ -26,13 +26,12 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
+    title: 'Mercury',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true
-    },
-    titleBarStyle: 'hidden',
-    frame: false
+    }
   })
 
   if (process.argv.includes('--dev')) {
