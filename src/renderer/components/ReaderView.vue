@@ -24,6 +24,10 @@
           </a>
         </div>
 
+        <div v-if="article.tags.length > 0" class="reader-tags" aria-label="文章标签">
+          <span v-for="tag in article.tags" :key="tag" class="reader-tag">{{ tag }}</span>
+        </div>
+
         <div class="reader-actions">
           <button class="action-btn" @click="$emit('summarize')">
             <FileText class="action-icon" />
@@ -255,6 +259,23 @@ function normalizeLineHeight(value: string): number {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.reader-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -6px 0 16px;
+}
+
+.reader-tag {
+  padding: 2px 8px;
+  background: var(--reader-panel-bg);
+  color: var(--reader-link);
+  border: 1px solid var(--reader-border);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .action-btn {
