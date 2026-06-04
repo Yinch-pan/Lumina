@@ -106,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 defineEmits<{
   'close': []
@@ -124,12 +124,63 @@ const readingSettings = ref({
   theme: 'light'
 })
 
-const saveLLMConfig = () => {
-  alert('LLM 配置保存功能（占位）\n\n实际功能将在模块 D 中实现')
+onMounted(async () => {
+  if (!window.electronAPI) {
+    return
+  }
+
+  try {
+    // 加载 LLM 配置
+    const config = await window.electronAPI.getLLMConfig()
+    llmConfig.value = {
+      baseUrl: config.baseUrl || '',
+      apiKey: config.apiKey || '',
+      model: config.model || ''
+    }
+
+    // 加载阅读设置
+    const fontSize = await window.electronAPI.getSetting('reading.fontSize')
+    const lineHeight = await window.electronAPI.getSetting('reading.lineHeight')
+    const theme = await window.electronAPI.getSetting('reading.theme')
+
+    if (fontSize) readingSettings.value.fontSize = fontSize
+    if (lineHeight) readingSettings.value.lineHeight = lineHeight
+    if (theme) readingSettings.value.theme = theme
+  } catch (error) {
+    console.error('Failed to load settings', error)
+  }
+})
+
+const saveLLMConfig = async () => {
+  if (!window.electronAPI) {
+    alert('当前环境不支持保存设置')
+    return
+  }
+
+  try {
+    await window.electronAPI.saveLLMConfig(llmConfig.value)
+    alert('LLM 配置已保存')
+  } catch (error) {
+    console.error('Failed to save LLM config', error)
+    alert(`保存失败：${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
-const saveReadingSettings = () => {
-  alert('阅读设置保存功能（占位）\n\n实际功能将在模块 D 中实现')
+const saveReadingSettings = async () => {
+  if (!window.electronAPI) {
+    alert('当前环境不支持保存设置')
+    return
+  }
+
+  try {
+    await window.electronAPI.saveSetting('reading.fontSize', readingSettings.value.fontSize)
+    await window.electronAPI.saveSetting('reading.lineHeight', readingSettings.value.lineHeight)
+    await window.electronAPI.saveSetting('reading.theme', readingSettings.value.theme)
+    alert('阅读设置已保存')
+  } catch (error) {
+    console.error('Failed to save reading settings', error)
+    alert(`保存失败：${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 </script>
 

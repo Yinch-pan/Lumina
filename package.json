@@ -10,27 +10,95 @@
     "build": "npm run build:renderer && npm run build:main",
     "verify:module-b": "npm run build:main && node test/module-b-cleaning-verification.cjs",
     "start": "electron .",
-    "dev:electron": "npm run build:main && electron . --dev"
+    "dev:electron": "npm run build:main && electron . --dev",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Yinch-pan/Mercury.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["rss", "reader", "electron", "ai", "markdown"],
+  "author": "Mercury Team",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Yinch-pan/Mercury/issues"
   },
   "homepage": "https://github.com/Yinch-pan/Mercury#readme",
+  "build": {
+    "appId": "com.mercury.rss",
+    "productName": "Mercury",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+    "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+        "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mercury"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable.${ext}"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.news",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "contents": [
+        {
+       "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+    ]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "build/icon.png",
+      "category": "Network",
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^25.9.1",
-    "@types/sanitize-html": "^2.16.0",
-    "@types/turndown": "^5.0.5",
+    "@types/sanitize-html": "^2.16.1",
+    "@types/turndown": "^5.0.6",
     "@vitejs/plugin-vue": "^6.0.7",
-    "electron": "^38.4.0",
+    "electron": "^38.8.6",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
     "typescript": "^6.0.3",
@@ -39,7 +107,7 @@
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
-    "better-sqlite3": "^12.10.0",
+    "better-sqlite3": "12.10.0",
     "fast-xml-parser": "^5.8.0",
     "jsdom": "^26.1.0",
     "lucide-vue-next": "^0.460.0",
@@ -47,6 +115,6 @@
     "openai": "^4.0.0",
     "rss-parser": "^3.13.0",
     "sanitize-html": "^2.17.4",
-    "turndown": "^7.2.4"
+  "turndown": "^7.2.4"
   }
 }

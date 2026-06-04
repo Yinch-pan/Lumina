@@ -29,8 +29,35 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportOpml: (filePath: string) => ipcRenderer.invoke('export-opml', filePath),
   markArticleRead: (articleId: string) => ipcRenderer.invoke('mark-article-read', articleId),
   markArticleUnread: (articleId: string) => ipcRenderer.invoke('mark-article-unread', articleId),
+
+  // 模块 C: AI 摘要与翻译
   summarizeArticle: (articleId: string) => ipcRenderer.invoke('summarize-article', articleId),
-  translateArticle: (articleId: string, targetLang: string) => ipcRenderer.invoke('translate-article', articleId, targetLang),
-  addTag: (articleId: string, tagName: string) => ipcRenderer.invoke('add-tag', articleId, tagName),
-  exportMarkdown: (articleId: string) => ipcRenderer.invoke('export-markdown', articleId)
+  translateArticle: (articleId: string, targetLang: string) =>
+    ipcRenderer.invoke('translate-article', articleId, targetLang),
+
+  // 模块 D: 标签管理
+  getAllTags: () => ipcRenderer.invoke('get-all-tags'),
+  createTag: (name: string) => ipcRenderer.invoke('create-tag', name),
+  deleteTag: (tagId: string) => ipcRenderer.invoke('delete-tag', tagId),
+  addTagToArticle: (articleId: string, tagName: string) =>
+    ipcRenderer.invoke('add-tag-to-article', articleId, tagName),
+  removeTagFromArticle: (articleId: string, tagName: string) =>
+    ipcRenderer.invoke('remove-tag-from-article', articleId, tagName),
+  getArticleTags: (articleId: string) => ipcRenderer.invoke('get-article-tags', articleId),
+  getArticlesByTag: (tagName: string) => ipcRenderer.invoke('get-articles-by-tag', tagName),
+
+  // 模块 D: Markdown 导出
+  selectMarkdownExportPath: (defaultFilename: string) =>
+    ipcRenderer.invoke('select-markdown-export-path', defaultFilename),
+  exportMarkdown: (articleId: string, filePath: string) =>
+    ipcRenderer.invoke('export-markdown', articleId, filePath),
+  exportMarkdownBatch: (articleIds: string[], dirPath: string) =>
+    ipcRenderer.invoke('export-markdown-batch', articleIds, dirPath),
+
+  // 模块 D: 设置管理
+  getLLMConfig: () => ipcRenderer.invoke('get-llm-config'),
+  saveLLMConfig: (config: { baseUrl?: string; apiKey?: string; model?: string }) =>
+    ipcRenderer.invoke('save-llm-config', config),
+  getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
+  saveSetting: (key: string, value: string) => ipcRenderer.invoke('save-setting', key, value)
 })

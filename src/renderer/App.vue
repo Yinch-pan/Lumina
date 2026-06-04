@@ -58,12 +58,17 @@
       :filePath="opmlFilePath"
       :feeds="opmlPreviewFeeds"
       :progress="opmlImportProgress"
-      :isLoading="isImportingOpml"
-      :error="opmlDialogError"
+    :isLoading="isImportingOpml"
+  :error="opmlDialogError"
       @close="closeOpmlDialog"
       @select-file="selectOpmlFile"
       @file-dropped="previewDroppedOpmlFile"
       @import="importSelectedOpmlFeeds"
+    />
+    <TagDialog
+      v-if="showTagDialog"
+      @close="showTagDialog = false"
+      @confirm="handleTagConfirm"
     />
   </div>
 </template>
@@ -78,6 +83,7 @@ import SettingsView from './components/SettingsView.vue'
 import AddSubscriptionDialog from './components/AddSubscriptionDialog.vue'
 import EditSubscriptionDialog from './components/EditSubscriptionDialog.vue'
 import OpmlImportDialog from './components/OpmlImportDialog.vue'
+import TagDialog from './components/TagDialog.vue'
 import type { Article, ArticleContent, Feed, OpmlFeed, Tag } from '../main/types'
 import type { ArticleFilter } from './components/ArticleList.vue'
 
@@ -168,6 +174,7 @@ const selectedArticleId = ref('1')
 const selectedArticleContent = ref<ArticleContent | null>(mockArticleContent)
 const articleList = ref<Article[]>(mockArticles)
 const showSettings = ref(false)
+const showTagDialog = ref(false)
 const useMockData = ref(true)
 const articleFilter = ref<ArticleFilter>('all')
 const isLoadingArticles = ref(false)
@@ -640,7 +647,37 @@ const handleTranslate = () => {
 }
 
 const handleAddTag = () => {
-  alert('添加标签功能（占位）')
+  console.log('handleAddTag called', {
+    hasElectronAPI: !!window.electronAPI,
+    selectedArticleId: selectedArticleId.value
+  })
+
+  if (!window.electronAPI || !selectedArticleId.value) {
+    alert('当前环境不支持添加标签或未选择文章')
+    return
+  }
+
+  showTagDialog.value = true
+}
+
+const handleTagConfirm = async (tagName: string) => {
+  showTagDialog.value = false
+
+  if (!window.electronAPI || !selectedArticleId.value) {
+    return
+  }
+
+  try {
+    await window.electronAPI.addTagToArticle(selectedArticleId.value, tagName)
+    // 重新加载文章内容以获取更新后的标签
+    selectedArticleContent.value = await window.electronAPI.getArticleContent(selectedArticleId.value)
+    // 重新加载文章列表以更新标签
+    articleList.value = await window.electronAPI.getArticleList(selectedFeedId.value)
+    alert('标签添加成功')
+  } catch (error) {
+    console.error('Failed to add tag', error)
+    alert(`添加标签失败：${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
 const handleMarkUnread = async () => {
@@ -661,8 +698,29 @@ const handleMarkUnread = async () => {
   }
 }
 
-const handleExport = () => {
-  alert('导出 Markdown 功能（占位）')
+const handleExport = async () => {
+  if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
+    alert('当前环境不支持导出')
+    return
+  }
+
+  try {
+    // 生成默认文件名
+    const filename = selectedArticleContent.value.title.replace(/[<>:"/\\|?*]/g, '_').substring(0, 50) + '.md'
+
+    // 选择保存路径
+    const filePath = await window.electronAPI.selectMarkdownExportPath(filename)
+    if (!filePath) {
+      return
+    }
+
+    // 导出文件
+    await window.electronAPI.exportMarkdown(selectedArticleId.value, filePath)
+    alert('导出成功！')
+  } catch (error) {
+    console.error('Failed to export markdown', error)
+    alert(`导出失败：${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 </script>
 

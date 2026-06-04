@@ -1,18 +1,30 @@
 import { Repository } from '../database/repository'
 import { Article, ArticleContent } from '../types'
 import { CleaningService } from './CleaningService'
-import { IArticleService } from './interfaces'
+import { IArticleService, ICleaningService } from './interfaces'
 
 type FetchText = (url: string) => Promise<string>
 
 const DEFAULT_USER_AGENT = 'Mercury/1.0 RSS Reader'
 
 export class ArticleService implements IArticleService {
+  private readonly cleaningService: ICleaningService
+  private readonly fetchText: FetchText
+
   constructor(
     private readonly repository: Repository,
-    private readonly fetchText: FetchText = defaultFetchText,
-    private readonly cleaningService = new CleaningService()
-  ) {}
+    cleaningServiceOrFetchText: ICleaningService | FetchText = new CleaningService(),
+    fetchText: FetchText = defaultFetchText
+  ) {
+    if (typeof cleaningServiceOrFetchText === 'function') {
+      this.cleaningService = new CleaningService()
+      this.fetchText = cleaningServiceOrFetchText
+      return
+    }
+
+    this.cleaningService = cleaningServiceOrFetchText
+    this.fetchText = fetchText
+  }
 
   async getArticlesByFeed(feedId: string): Promise<Article[]> {
     return this.repository.getArticlesByFeed(feedId)
@@ -66,7 +78,7 @@ export class ArticleService implements IArticleService {
     }
 
     if (!content) {
-      throw new Error(`Article content cannot be loaded after fetch: ${articleId}`)
+      throw new Error(`Article content cannot be loaded after cleaning: ${articleId}`)
     }
 
     return content

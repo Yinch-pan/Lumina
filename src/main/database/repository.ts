@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import { randomUUID } from 'crypto'
 import { Article, ArticleContent, Feed, Tag } from '../types'
 
 export interface FeedRecord {
@@ -452,6 +453,90 @@ export class Repository {
     }
 
     return new Date(timestamp).toISOString()
+  }
+
+  // ==================== 标签管理 =================
+
+  getAllTags(): Tag[] {
+    const rows = this.db
+      .prepare(
+        `SELECT tags.id, tags.name, COUNT(entry_tags.entry_id) AS count
+      FROM tags
+         LEFT JOIN entry_tags ON entry_tags.tag_id = tags.id
+         GROUP BY tags.id
+         ORDER BY tags.name COLLATE NOCASE`
+      )
+      .all() as TagRow[]
+
+    return rows.map((row) => ({
+      id: String(row.id),
+      name: String(row.name),
+      count: Number(row.count)
+    }))
+  }
+
+  createTag(name: string): string {
+    const tagId = randomUUID()
+    const now = Date.now()
+    this.db.prepare('INSERT INTO tags (id, name, created_at) VALUES (?, ?, ?)').run(tagId, name, now)
+    return tagId
+  }
+
+  deleteTag(tagId: string): void {
+    this.db.prepare('DELETE FROM entry_tags WHERE tag_id = ?').run(tagId)
+    this.db.prepare('DELETE FROM tags WHERE id = ?').run(tagId)
+  }
+
+  addTagToEntry(entryId: string, tagId: string): void {
+    // 检查是否已存在
+    const existing = this.db
+      .prepare('SELECT 1 FROM entry_tags WHERE entry_id = ? AND tag_id = ?')
+      .get(entryId, tagId)
+
+    if (!existing) {
+      const now = Date.now()
+      this.db
+        .prepare('INSERT INTO entry_tags (entry_id, tag_id, created_at) VALUES (?, ?, ?)')
+        .run(entryId, tagId, now)
+    }
+  }
+
+  removeTagFromEntry(entryId: string, tagId: string): void {
+    this.db.prepare('DELETE FROM entry_tags WHERE entry_id = ? AND tag_id = ?').run(entryId, tagId)
+  }
+
+  getArticlesByTag(tagId: string): Article[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT entries.*
+         FROM entries
+         INNER JOIN entry_tags ON entry_tags.entry_id = entries.id
+       WHERE entry_tags.tag_id = ?
+         ORDER BY entries.published_at DESC, entries.created_at DESC`
+      )
+      .all(tagId) as EntryRow[]
+
+    return rows.map((row) => this.toArticle(row))
+  }
+
+  // ============ 设置管理 ================
+
+  getSetting(key: string): string | null {
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+      | { value: string }
+      | undefined
+
+    return row?.value ?? null
+  }
+
+  setSetting(key: string, value: string): void {
+    const now = Date.now()
+    this.db
+      .prepare(
+        `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+      )
+      .run(key, value, now)
   }
 }
 

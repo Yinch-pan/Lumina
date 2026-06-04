@@ -3,12 +3,19 @@ import * as path from 'path'
 import { initDatabase } from './database/init'
 import { Repository } from './database/repository'
 import { ArticleService } from './services/ArticleService'
+import { CleaningService } from './services/CleaningService'
+import { ExportService } from './services/ExportService'
 import { FeedService } from './services/FeedService'
-import { OpmlFeed } from './types'
+import { SettingsService } from './services/SettingsService'
+import { TagService } from './services/TagService'
+import { LLMConfig, OpmlFeed } from './types'
 
 let mainWindow: BrowserWindow | null = null
 let feedService: FeedService | null = null
 let articleService: ArticleService | null = null
+let tagService: TagService | null = null
+let exportService: ExportService | null = null
+let settingsService: SettingsService | null = null
 let autoRefreshTimer: NodeJS.Timeout | null = null
 
 const AUTO_REFRESH_CHECK_INTERVAL_MS = 60 * 1000
@@ -19,13 +26,12 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
+    title: 'Mercury',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true
-    },
-    titleBarStyle: 'hidden',
-    frame: false
+    }
   })
 
   if (process.argv.includes('--dev')) {
@@ -116,13 +122,67 @@ function registerIpcHandlers() {
   ipcMain.handle('mark-article-unread', async (_event, articleId: string) =>
     getArticleService().markAsUnread(articleId)
   )
+
+  // 模块 D: 标签管理
+  ipcMain.handle('get-all-tags', async () => cloneForIpc(await getTagService().getAllTags()))
+  ipcMain.handle('create-tag', async (_event, name: string) => cloneForIpc(await getTagService().createTag(name)))
+  ipcMain.handle('delete-tag', async (_event, tagId: string) => getTagService().deleteTag(tagId))
+  ipcMain.handle('add-tag-to-article', async (_event, articleId: string, tagName: string) =>
+    getTagService().addTagToArticle(articleId, tagName)
+  )
+  ipcMain.handle('remove-tag-from-article', async (_event, articleId: string, tagName: string) =>
+    getTagService().removeTagFromArticle(articleId, tagName)
+  )
+  ipcMain.handle('get-article-tags', async (_event, articleId: string) =>
+    cloneForIpc(await getTagService().getArticleTags(articleId))
+  )
+  ipcMain.handle('get-articles-by-tag', async (_event, tagName: string) =>
+    cloneForIpc(await getTagService().getArticlesByTag(tagName))
+  )
+
+  // 模块 D: Markdown 导出
+  ipcMain.handle('select-markdown-export-path', async (_event, defaultFilename: string) => {
+    const result = mainWindow
+      ? await dialog.showSaveDialog(mainWindow, {
+        title: '导出 Markdown',
+          defaultPath: defaultFilename,
+          filters: [{ name: 'Markdown', extensions: ['md'] }]
+        })
+      : await dialog.showSaveDialog({
+          title: '导出 Markdown',
+          defaultPath: defaultFilename,
+          filters: [{ name: 'Markdown', extensions: ['md'] }]
+        })
+
+    return result.canceled ? null : result.filePath ?? null
+  })
+  ipcMain.handle('export-markdown', async (_event, articleId: string, filePath: string) =>
+    getExportService().exportArticle(articleId, filePath)
+  )
+  ipcMain.handle('export-markdown-batch', async (_event, articleIds: string[], dirPath: string) =>
+    getExportService().exportArticles(articleIds, dirPath)
+  )
+
+  // 模块 D: 设置管理
+  ipcMain.handle('get-llm-config', async () => cloneForIpc(await getSettingsService().getLLMConfig()))
+  ipcMain.handle('save-llm-config', async (_event, config: LLMConfig) =>
+    getSettingsService().saveLLMConfig(config)
+  )
+  ipcMain.handle('get-setting', async (_event, key: string) => getSettingsService().getSetting(key))
+  ipcMain.handle('save-setting', async (_event, key: string, value: string) =>
+    getSettingsService().saveSetting(key, value)
+  )
 }
 
 function initializeServices() {
   const database = initDatabase()
   const repository = new Repository(database)
+  const cleaningService = new CleaningService()
   feedService = new FeedService(repository)
-  articleService = new ArticleService(repository)
+  articleService = new ArticleService(repository, cleaningService)
+  tagService = new TagService(repository)
+  exportService = new ExportService(repository, articleService)
+  settingsService = new SettingsService(repository)
   startAutoRefreshScheduler()
 }
 
@@ -138,6 +198,26 @@ function getArticleService(): ArticleService {
     throw new Error('ArticleService is not initialized')
   }
   return articleService
+}
+function getTagService(): TagService {
+  if (!tagService) {
+    throw new Error('TagService is not initialized')
+  }
+  return tagService
+}
+
+function getExportService(): ExportService {
+  if (!exportService) {
+    throw new Error('ExportService is not initialized')
+  }
+  return exportService
+}
+
+function getSettingsService(): SettingsService {
+  if (!settingsService) {
+    throw new Error('SettingsService is not initialized')
+  }
+  return settingsService
 }
 
 function cloneForIpc<T>(value: T): T {

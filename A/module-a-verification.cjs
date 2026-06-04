@@ -78,7 +78,7 @@ async function main() {
   assert(unread.length === 1, 'mark read updates unread list')
 
   const imported = await feedService.importOpml(opmlPath)
-  assert(imported.length === 1, 'OPML import returns existing feed')
+  assert(imported.feeds.length === 1, 'OPML import returns existing feed')
 
   await feedService.exportOpml(exportPath)
   assert(fs.existsSync(exportPath), 'OPML export file exists')
