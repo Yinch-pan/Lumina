@@ -14,6 +14,9 @@ const RAW_HTML = `
 async function main() {
   await verifiesStoredRawHtmlIsCleanedAndPersisted()
   await verifiesMissingRawHtmlIsFetchedBeforeCleaning()
+  await verifiesAlreadyCleanedContentIsReturnedWithoutWork()
+  await verifiesMissingArticleRaisesClearError()
+  await verifiesFetchFailureDoesNotAttemptCleaning()
   console.log('Module B article service verification passed')
 }
 
@@ -61,6 +64,66 @@ async function verifiesMissingRawHtmlIsFetchedBeforeCleaning() {
   assert(content.rawHtml === fetchedHtml, 'returns fetched raw HTML from repository')
   assert(content.cleanedHtml.includes('cleaned article-1'), 'returns cleaned HTML after fetch')
   assert(repository.upserts.length === 2, 'persists fetched raw HTML and cleaned output')
+}
+
+async function verifiesAlreadyCleanedContentIsReturnedWithoutWork() {
+  const repository = createRepository({
+    rawHtml: RAW_HTML,
+    cleanedHtml: '<article><p>already cleaned</p></article>',
+    cleanedMarkdown: 'already cleaned'
+  })
+
+  const cleaningService = createCleaningService()
+  const fetchText = async () => {
+    throw new Error('fetch should not be called')
+  }
+
+  const service = new ArticleService(repository, cleaningService, fetchText)
+  const content = await service.getArticleContent('article-1')
+
+  assert(cleaningService.calls.length === 0, 'does not clean when cleaned fields already exist')
+  assert(repository.upserts.length === 0, 'does not persist when no cleaning is needed')
+  assert(content.cleanedHtml.includes('already cleaned'), 'returns existing cleaned HTML')
+  assert(content.cleanedMarkdown.includes('already cleaned'), 'returns existing cleaned Markdown')
+}
+
+async function verifiesMissingArticleRaisesClearError() {
+  const repository = createRepository({
+    rawHtml: RAW_HTML,
+    cleanedHtml: null,
+    cleanedMarkdown: null
+  })
+
+  const service = new ArticleService(repository, createCleaningService())
+
+  await assertRejects(
+    () => service.getArticleContent('missing-article'),
+    'Article not found: missing-article',
+    'throws a clear error when the article row is missing'
+  )
+}
+
+async function verifiesFetchFailureDoesNotAttemptCleaning() {
+  const repository = createRepository({
+    rawHtml: null,
+    cleanedHtml: null,
+    cleanedMarkdown: null
+  })
+
+  const cleaningService = createCleaningService()
+  const fetchText = async () => {
+    throw new Error('network unavailable')
+  }
+
+  const service = new ArticleService(repository, cleaningService, fetchText)
+
+  await assertRejects(
+    () => service.getArticleContent('article-1'),
+    'network unavailable',
+    'propagates fetch failures for ReaderView error handling'
+  )
+  assert(cleaningService.calls.length === 0, 'does not clean when fetching raw HTML fails')
+  assert(repository.upserts.length === 0, 'does not persist partial content when fetching raw HTML fails')
 }
 
 function createRepository(initialContent) {
@@ -125,6 +188,17 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(`Assertion failed: ${message}`)
   }
+}
+
+async function assertRejects(action, expectedMessage, message) {
+  try {
+    await action()
+  } catch (error) {
+    assert(String(error.message || error).includes(expectedMessage), message)
+    return
+  }
+
+  throw new Error(`Assertion failed: ${message}`)
 }
 
 main().catch((error) => {
