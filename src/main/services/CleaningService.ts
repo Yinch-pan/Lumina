@@ -33,6 +33,8 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
     'li',
     'a',
     'img',
+    'picture',
+    'source',
     'figure',
     'figcaption',
     'table',
@@ -41,13 +43,20 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
     'tr',
     'th',
     'td',
-    'hr'
+    'hr',
+    'time',
+    'sup',
+    'sub',
+    'mark'
   ],
   allowedAttributes: {
     a: ['href', 'title', 'target', 'rel'],
-    img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'decoding'],
+    blockquote: ['cite'],
+    img: ['src', 'srcset', 'sizes', 'alt', 'title', 'width', 'height', 'loading', 'decoding'],
+    source: ['src', 'srcset', 'sizes', 'type', 'media'],
     code: ['class'],
     pre: ['class'],
+    time: ['datetime'],
     th: ['colspan', 'rowspan'],
     td: ['colspan', 'rowspan']
   },
@@ -88,6 +97,10 @@ const NOISE_SELECTORS = [
   '.comicNav'
 ]
 
+const LAZY_IMAGE_ATTRIBUTES = ['data-src', 'data-original', 'data-lazy-src', 'data-url', 'data-orig-file']
+const LAZY_SRCSET_ATTRIBUTES = ['data-srcset', 'data-lazy-srcset']
+const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+const ALLOWED_IMAGE_PROTOCOLS = new Set(['http:', 'https:', 'data:'])
 const CONTENT_SELECTORS = [
   'article',
   'main',
@@ -119,6 +132,7 @@ export class CleaningService implements ICleaningService {
     try {
       const dom = new JSDOM(html, { url })
       removeNoise(dom)
+      normalizeMedia(dom)
 
       const readableDocument = dom.window.document.cloneNode(true) as typeof dom.window.document
       const readable = new Readability(readableDocument).parse()
@@ -165,6 +179,34 @@ function removeNoise(dom: JSDOM): void {
   for (const selector of NOISE_SELECTORS) {
     for (const element of Array.from(document.querySelectorAll(selector))) {
       element.remove()
+    }
+  }
+}
+
+function normalizeMedia(dom: JSDOM): void {
+  const document = dom.window.document
+
+  for (const image of Array.from(document.querySelectorAll('img'))) {
+    const lazySrc = getFirstAttribute(image, LAZY_IMAGE_ATTRIBUTES)
+    const currentSrc = image.getAttribute('src')?.trim() ?? ''
+    if (lazySrc && (!currentSrc || isLikelyPlaceholderImage(currentSrc))) {
+      image.setAttribute('src', lazySrc)
+    }
+
+    const lazySrcset = getFirstAttribute(image, LAZY_SRCSET_ATTRIBUTES)
+    if (lazySrcset && !image.getAttribute('srcset')) {
+      image.setAttribute('srcset', lazySrcset)
+    }
+
+    if (isTrackingImage(image)) {
+      image.remove()
+    }
+  }
+
+  for (const source of Array.from(document.querySelectorAll('source'))) {
+    const lazySrcset = getFirstAttribute(source, LAZY_SRCSET_ATTRIBUTES)
+    if (lazySrcset && !source.getAttribute('srcset')) {
+      source.setAttribute('srcset', lazySrcset)
     }
   }
 }
@@ -235,14 +277,142 @@ function resolveRelativeUrls(html: string, baseUrl: string): string {
   const document = dom.window.document
 
   for (const link of Array.from(document.querySelectorAll('a[href]'))) {
-    link.setAttribute('href', new URL(link.getAttribute('href') ?? '', baseUrl).toString())
+    resolveUrlAttribute(link, 'href', baseUrl, ALLOWED_LINK_PROTOCOLS)
   }
 
   for (const image of Array.from(document.querySelectorAll('img[src]'))) {
-    image.setAttribute('src', new URL(image.getAttribute('src') ?? '', baseUrl).toString())
+    resolveUrlAttribute(image, 'src', baseUrl, ALLOWED_IMAGE_PROTOCOLS)
+  }
+
+  for (const image of Array.from(document.querySelectorAll('img[srcset]'))) {
+    resolveSrcsetAttribute(image, 'srcset', baseUrl, ALLOWED_IMAGE_PROTOCOLS)
+  }
+
+  for (const source of Array.from(document.querySelectorAll('source[src]'))) {
+    resolveUrlAttribute(source, 'src', baseUrl, ALLOWED_IMAGE_PROTOCOLS)
+  }
+
+  for (const source of Array.from(document.querySelectorAll('source[srcset]'))) {
+    resolveSrcsetAttribute(source, 'srcset', baseUrl, ALLOWED_IMAGE_PROTOCOLS)
+  }
+
+  for (const quote of Array.from(document.querySelectorAll('blockquote[cite]'))) {
+    resolveUrlAttribute(quote, 'cite', baseUrl, ALLOWED_LINK_PROTOCOLS)
   }
 
   return document.body.innerHTML
+}
+
+function resolveUrlAttribute(
+  element: Element,
+  attribute: string,
+  baseUrl: string,
+  allowedProtocols: Set<string>
+): void {
+  const value = element.getAttribute(attribute)
+  const resolved = resolveUrl(value, baseUrl, allowedProtocols)
+  if (resolved) {
+    element.setAttribute(attribute, resolved)
+  } else {
+    element.removeAttribute(attribute)
+  }
+}
+
+function resolveSrcsetAttribute(
+  element: Element,
+  attribute: string,
+  baseUrl: string,
+  allowedProtocols: Set<string>
+): void {
+  const value = element.getAttribute(attribute)
+  if (!value) {
+    return
+  }
+
+  const candidates = value
+    .split(',')
+    .map((candidate) => normalizeSrcsetCandidate(candidate, baseUrl, allowedProtocols))
+    .filter((candidate): candidate is string => Boolean(candidate))
+
+  if (candidates.length > 0) {
+    element.setAttribute(attribute, candidates.join(', '))
+  } else {
+    element.removeAttribute(attribute)
+  }
+}
+
+function normalizeSrcsetCandidate(
+  candidate: string,
+  baseUrl: string,
+  allowedProtocols: Set<string>
+): string | null {
+  const parts = candidate.trim().split(/\s+/).filter(Boolean)
+  const [rawUrl, ...descriptors] = parts
+  const resolved = resolveUrl(rawUrl, baseUrl, allowedProtocols)
+
+  if (!resolved) {
+    return null
+  }
+
+  return [resolved, ...descriptors].join(' ')
+}
+
+function resolveUrl(
+  value: string | null | undefined,
+  baseUrl: string,
+  allowedProtocols: Set<string>
+): string | null {
+  const trimmed = value?.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  try {
+    const resolved = new URL(trimmed, baseUrl)
+    if (!allowedProtocols.has(resolved.protocol)) {
+      return null
+    }
+
+    if (resolved.protocol === 'data:' && !isSafeDataImage(resolved.toString())) {
+      return null
+    }
+
+    return resolved.toString()
+  } catch {
+    return null
+  }
+}
+
+function getFirstAttribute(element: Element, attributes: string[]): string | null {
+  for (const attribute of attributes) {
+    const value = element.getAttribute(attribute)?.trim()
+    if (value) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function isLikelyPlaceholderImage(src: string): boolean {
+  const normalized = src.toLowerCase()
+  return (
+    normalized.startsWith('data:image/gif') ||
+    normalized.includes('blank.gif') ||
+    normalized.includes('spacer.gif') ||
+    normalized.includes('transparent.gif') ||
+    normalized.includes('placeholder')
+  )
+}
+
+function isTrackingImage(image: Element): boolean {
+  const width = Number.parseInt(image.getAttribute('width') ?? '', 10)
+  const height = Number.parseInt(image.getAttribute('height') ?? '', 10)
+  return width > 0 && width <= 2 && height > 0 && height <= 2 && !image.getAttribute('alt')
+}
+
+function isSafeDataImage(value: string): boolean {
+  return /^data:image\/(?:png|gif|jpe?g|webp|avif|bmp);/i.test(value)
 }
 
 function getFallbackHtml(rawHtml: string, url: string): string {
