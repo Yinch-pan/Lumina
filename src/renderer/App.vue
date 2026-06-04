@@ -26,6 +26,9 @@
       />
       <ReaderView
         :article="selectedArticle"
+        :isLoading="isLoadingArticle"
+        :error="articleLoadError"
+        :readingSettings="readingSettings"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -35,7 +38,11 @@
     </div>
 
     <!-- 设置页面 -->
-    <SettingsView v-if="showSettings" @close="showSettings = false" />
+    <SettingsView
+      v-if="showSettings"
+      @close="handleSettingsClose"
+      @settings-updated="loadReadingSettings"
+    />
     <AddSubscriptionDialog
       v-if="showAddSubscription"
       :isLoading="isAddingFeed"
@@ -92,6 +99,12 @@ type OpmlImportProgressItem = {
   url: string
   status: 'pending' | 'importing' | 'success' | 'failed'
   message?: string
+}
+
+type ReadingSettings = {
+  fontSize: string
+  lineHeight: string
+  theme: string
 }
 
 // Mock 数据
@@ -178,6 +191,8 @@ const showTagDialog = ref(false)
 const useMockData = ref(true)
 const articleFilter = ref<ArticleFilter>('all')
 const isLoadingArticles = ref(false)
+const isLoadingArticle = ref(false)
+const articleLoadError = ref('')
 const isRefreshing = ref(false)
 const showAddSubscription = ref(false)
 const isAddingFeed = ref(false)
@@ -191,6 +206,11 @@ const opmlDialogError = ref('')
 const opmlFilePath = ref('')
 const opmlPreviewFeeds = ref<OpmlFeed[]>([])
 const opmlImportProgress = ref<OpmlImportProgressItem[]>([])
+const readingSettings = ref<ReadingSettings>({
+  fontSize: '16',
+  lineHeight: '1.8',
+  theme: 'light'
+})
 
 const articles = computed(() => {
   let filteredArticles = articleList.value
@@ -216,7 +236,35 @@ const selectedArticle = computed(() => {
 
 onMounted(() => {
   void loadFeeds()
+  void loadReadingSettings()
 })
+
+const loadReadingSettings = async () => {
+  if (!window.electronAPI) {
+    return
+  }
+
+  try {
+    const [fontSize, lineHeight, theme] = await Promise.all([
+      window.electronAPI.getSetting('reading.fontSize'),
+      window.electronAPI.getSetting('reading.lineHeight'),
+      window.electronAPI.getSetting('reading.theme')
+    ])
+
+    readingSettings.value = {
+      fontSize: fontSize || '16',
+      lineHeight: lineHeight || '1.8',
+      theme: theme || 'light'
+    }
+  } catch (error) {
+    console.error('Failed to load reading settings', error)
+  }
+}
+
+const handleSettingsClose = () => {
+  showSettings.value = false
+  void loadReadingSettings()
+}
 
 const loadFeeds = async () => {
   if (!window.electronAPI) {
@@ -235,6 +283,7 @@ const loadFeeds = async () => {
       articleList.value = []
       selectedArticleId.value = ''
       selectedArticleContent.value = null
+      articleLoadError.value = ''
     }
   } catch (error) {
     console.error('Failed to load feeds, fallback to mock data', error)
@@ -253,6 +302,7 @@ const loadArticles = async (feedId: string) => {
     articleList.value = await window.electronAPI.getArticleList(feedId)
     selectedArticleId.value = ''
     selectedArticleContent.value = null
+    articleLoadError.value = ''
   } finally {
     isLoadingArticles.value = false
   }
@@ -262,6 +312,7 @@ const handleSelectFeed = async (feedId: string) => {
   selectedFeedId.value = feedId
   selectedArticleId.value = ''
   selectedArticleContent.value = null
+  articleLoadError.value = ''
   await loadArticles(feedId)
 }
 
@@ -269,12 +320,21 @@ const handleSelectTag = (tagName: string) => {
   selectedTag.value = tagName
 }
 
+const getErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : String(error)
+}
+
 const handleSelectArticle = async (articleId: string) => {
   selectedArticleId.value = articleId
+  articleLoadError.value = ''
+
   if (!window.electronAPI || useMockData.value) {
     selectedArticleContent.value = mockArticleContent
     return
   }
+
+  isLoadingArticle.value = true
+  selectedArticleContent.value = null
 
   try {
     selectedArticleContent.value = await window.electronAPI.getArticleContent(articleId)
@@ -285,7 +345,9 @@ const handleSelectArticle = async (articleId: string) => {
     feeds.value = await window.electronAPI.getFeedList()
   } catch (error) {
     console.error('Failed to load article content', error)
-    alert(`加载文章失败：${error instanceof Error ? error.message : String(error)}`)
+    articleLoadError.value = `加载文章失败：${getErrorMessage(error)}`
+  } finally {
+    isLoadingArticle.value = false
   }
 }
 
@@ -346,6 +408,7 @@ const handleRefresh = async () => {
     feeds.value = await window.electronAPI.getFeedList()
     selectedArticleId.value = ''
     selectedArticleContent.value = null
+    articleLoadError.value = ''
   } catch (error) {
     console.error('Failed to refresh feed', error)
     feeds.value = await window.electronAPI.getFeedList()

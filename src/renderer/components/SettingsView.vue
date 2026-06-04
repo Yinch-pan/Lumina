@@ -108,8 +108,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-defineEmits<{
+const emit = defineEmits<{
   'close': []
+  'settings-updated': []
 }>()
 
 const llmConfig = ref({
@@ -176,6 +177,7 @@ const saveReadingSettings = async () => {
     await window.electronAPI.saveSetting('reading.fontSize', readingSettings.value.fontSize)
     await window.electronAPI.saveSetting('reading.lineHeight', readingSettings.value.lineHeight)
     await window.electronAPI.saveSetting('reading.theme', readingSettings.value.theme)
+    emit('settings-updated')
     alert('阅读设置已保存')
   } catch (error) {
     console.error('Failed to save reading settings', error)

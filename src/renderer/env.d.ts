@@ -1,4 +1,4 @@
-import type { Article, ArticleContent, Feed, OpmlFeed, OpmlImportResult } from '../main/types'
+import type { Article, ArticleContent, Feed, LLMConfig, OpmlFeed, OpmlImportResult, Tag } from '../main/types'
 
 export {}
 
@@ -30,8 +30,20 @@ declare global {
       markArticleUnread: (articleId: string) => Promise<void>
       summarizeArticle: (articleId: string) => Promise<string>
       translateArticle: (articleId: string, targetLang: string) => Promise<string>
-      addTag: (articleId: string, tagName: string) => Promise<void>
-      exportMarkdown: (articleId: string) => Promise<void>
+      getAllTags: () => Promise<Tag[]>
+      createTag: (name: string) => Promise<Tag>
+      deleteTag: (tagId: string) => Promise<void>
+      addTagToArticle: (articleId: string, tagName: string) => Promise<void>
+      removeTagFromArticle: (articleId: string, tagName: string) => Promise<void>
+      getArticleTags: (articleId: string) => Promise<Tag[]>
+      getArticlesByTag: (tagName: string) => Promise<Article[]>
+      selectMarkdownExportPath: (defaultFilename: string) => Promise<string | null>
+      exportMarkdown: (articleId: string, filePath: string) => Promise<void>
+      exportMarkdownBatch: (articleIds: string[], dirPath: string) => Promise<void>
+      getLLMConfig: () => Promise<LLMConfig>
+      saveLLMConfig: (config: Partial<LLMConfig>) => Promise<void>
+      getSetting: (key: string) => Promise<string | null>
+      saveSetting: (key: string, value: string) => Promise<void>
     }
   }
 }
