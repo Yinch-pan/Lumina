@@ -8,6 +8,7 @@
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json",
     "build": "npm run build:renderer && npm run build:main",
+    "verify:module-b": "npm run build:main && node test/module-b-cleaning-verification.cjs",
     "start": "electron .",
     "dev:electron": "npm run build:main && electron . --dev"
   },
