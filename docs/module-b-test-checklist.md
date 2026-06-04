@@ -39,8 +39,10 @@ npm run build
 | B-CLEAN-06 | 链接 | 相对链接可解析为绝对 URL |
 | B-CLEAN-07 | 安全 | 移除 `javascript:` 等不安全链接 |
 | B-CLEAN-08 | 代码块 | 保留 `pre/code` 并输出 Markdown fenced code |
-| B-CLEAN-09 | 表格 | 表格可横向滚动，不撑破页面 |
-| B-CLEAN-10 | 失败兜底 | 空 HTML 或提取失败时返回可显示的兜底内容 |
+| B-CLEAN-09 | 技术内联标记 | 保留 `kbd`、`var` 等技术文章常见标记 |
+| B-CLEAN-10 | 图片安全 | 拒绝不安全的 SVG data image |
+| B-CLEAN-11 | 表格 | 表格可横向滚动，不撑破页面 |
+| B-CLEAN-12 | 失败兜底 | 空 HTML 或提取失败时返回可显示的兜底内容 |
 
 ## 3. ArticleService 验收项
 

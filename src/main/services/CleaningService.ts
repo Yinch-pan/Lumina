@@ -25,6 +25,11 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
     'i',
     'u',
     's',
+    'del',
+    'ins',
+    'kbd',
+    'samp',
+    'var',
     'blockquote',
     'pre',
     'code',
@@ -97,7 +102,17 @@ const NOISE_SELECTORS = [
   '.comicNav'
 ]
 
-const LAZY_IMAGE_ATTRIBUTES = ['data-src', 'data-original', 'data-lazy-src', 'data-url', 'data-orig-file']
+const LAZY_IMAGE_ATTRIBUTES = [
+  'data-src',
+  'data-original',
+  'data-original-src',
+  'data-lazy-src',
+  'data-url',
+  'data-orig-file',
+  'data-image-src',
+  'data-hi-res-src',
+  'data-actualsrc'
+]
 const LAZY_SRCSET_ATTRIBUTES = ['data-srcset', 'data-lazy-srcset']
 const ALLOWED_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 const ALLOWED_IMAGE_PROTOCOLS = new Set(['http:', 'https:', 'data:'])

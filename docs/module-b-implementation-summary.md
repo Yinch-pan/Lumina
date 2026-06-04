@@ -85,6 +85,7 @@ interface CleanedContent {
 - 标题、段落、列表、引用、代码块、表格、分割线。
 - 图片、`picture/source`、`srcset`、图注。
 - 链接、时间、上下标、标记文本。
+- 技术文章常见的 `kbd`、`samp`、`var`、`ins`、`del`。
 
 当前清理的噪声包括：
 
@@ -95,10 +96,10 @@ interface CleanedContent {
 
 图片处理：
 
-- 支持 `data-src`、`data-original`、`data-lazy-src` 等懒加载图片属性。
+- 支持 `data-src`、`data-original`、`data-original-src`、`data-lazy-src` 等懒加载图片属性。
 - 支持 `data-srcset` 和 `source[srcset]`。
 - 相对链接统一解析为绝对 URL。
-- `data:` 图片仅允许安全的图片 MIME 类型。
+- `data:` 图片仅允许安全的图片 MIME 类型，拒绝 SVG data image。
 
 ## 6. ReaderView 行为
 
