@@ -42,6 +42,33 @@ const mockHtml = `<!doctype html>
   </body>
 </html>`
 
+const xkcdLikeHtml = `<!doctype html>
+<html>
+  <body>
+    <div id="topContainer">Top navigation should be removed.</div>
+    <div id="middleContainer" class="box">
+      <div id="ctitle">Detector</div>
+      <ul class="comicNav"><li><a href="/3087/">Prev</a></li></ul>
+      <div id="comic">
+        <img
+          src="//imgs.xkcd.com/comics/detector.png"
+          title="Alt text should survive."
+          alt="Detector"
+          srcset="//imgs.xkcd.com/comics/detector_2x.png 2x"
+        />
+      </div>
+      <ul class="comicNav"><li><a href="/3089/">Next</a></li></ul>
+      <p>Permanent link to this comic: <a href="https://xkcd.com/3088/">https://xkcd.com/3088/</a></p>
+    </div>
+    <div id="bottom" class="box">
+      <p>Comics I enjoy:</p>
+      <a href="https://www.smbc-comics.com/">SMBC</a>
+      <p>Other things:</p>
+      <p>xkcd.com is best viewed with Netscape Navigator.</p>
+    </div>
+  </body>
+</html>`
+
 async function main() {
   const service = new CleaningService()
   const result = await service.clean(mockHtml, 'https://example.com/posts/demo')
@@ -68,6 +95,14 @@ async function main() {
   const fallback = await service.clean('', 'https://example.com/fallback')
   assert(fallback.cleanedHtml.includes('https://example.com/fallback'), 'fallback contains original URL')
   assert(fallback.cleanedMarkdown.length > 0, 'fallback markdown is not empty')
+
+  const xkcd = await service.clean(xkcdLikeHtml, 'https://xkcd.com/3088/')
+  assert(xkcd.cleanedHtml.includes('https://imgs.xkcd.com/comics/detector.png'), 'keeps xkcd comic image')
+  assert(xkcd.cleanedHtml.includes('https://imgs.xkcd.com/comics/detector_2x.png 2x'), 'keeps xkcd comic srcset')
+  assert(xkcd.cleanedHtml.includes('Detector'), 'keeps xkcd comic title or alt text')
+  assert(!xkcd.cleanedHtml.includes('Comics I enjoy'), 'removes xkcd footer comic recommendations')
+  assert(!xkcd.cleanedHtml.includes('Other things'), 'removes xkcd footer links')
+  assert(!xkcd.cleanedHtml.includes('Netscape Navigator'), 'removes xkcd footer browser joke')
 
   console.log('Module B cleaning verification passed')
 }

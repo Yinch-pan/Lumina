@@ -99,6 +99,7 @@ const NOISE_SELECTORS = [
   '[id*="comment" i]',
   '[id*="advert" i]',
   '#topContainer',
+  '#bottom',
   '.comicNav'
 ]
 

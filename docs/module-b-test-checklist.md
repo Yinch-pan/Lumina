@@ -43,6 +43,7 @@ npm run build
 | B-CLEAN-10 | 图片安全 | 拒绝不安全的 SVG data image |
 | B-CLEAN-11 | 表格 | 表格可横向滚动，不撑破页面 |
 | B-CLEAN-12 | 失败兜底 | 空 HTML 或提取失败时返回可显示的兜底内容 |
+| B-CLEAN-13 | xkcd 图片型页面 | 保留漫画图片，移除 `Comics I enjoy`、`Other things`、`Netscape Navigator` 等页脚噪声 |
 
 ## 3. ArticleService 验收项
 
@@ -103,6 +104,7 @@ npm run build
 - 本地 Vite 页面检查 ReaderView 正常显示文章标题、元信息、5 个操作按钮和正文。
 - 桌面宽度无横向溢出。
 - 390px 窄屏宽度无横向溢出。
+- 真实 xkcd 页面清洗证明已生成：保留漫画图片，移除页脚噪声。
 
 环境说明：
 
