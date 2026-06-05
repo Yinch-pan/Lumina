@@ -1,6 +1,3 @@
-import * as fs from 'fs'
-import * as path from 'path'
-
 /**
  * LLM Provider 配置接口
  */
