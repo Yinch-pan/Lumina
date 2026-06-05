@@ -50,6 +50,7 @@ export interface ArticleContent {
   rawHtml?: string
   cleanedHtml?: string
   cleanedMarkdown?: string
+  cleanerVersion?: string
   summary?: string
   translation?: string
   tags: string[]
@@ -60,6 +61,7 @@ export interface CleanedContent {
   cleanedMarkdown: string
   title?: string
   author?: string
+  cleanerVersion?: string
 }
 
 export interface Tag {

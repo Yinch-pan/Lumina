@@ -1,4 +1,4 @@
-const { CleaningService } = require('../dist/main/services/CleaningService')
+const { CLEANER_VERSION, CleaningService } = require('../dist/main/services/CleaningService')
 
 const mockHtml = `<!doctype html>
 <html>
@@ -46,6 +46,18 @@ const xkcdLikeHtml = `<!doctype html>
 <html>
   <body>
     <div id="topContainer">Top navigation should be removed.</div>
+    <div id="masthead">
+      <a href="/archive">Archive</a>
+      <a href="https://what-if.xkcd.com/">What If?</a>
+      <a href="/about">About</a>
+      <a href="/rss.xml">Feed</a>
+      <a href="mailto:press@example.com">Email</a>
+      <a href="https://twitter.com/xkcd">TW</a>
+      <a href="https://facebook.com/xkcd">FB</a>
+      <a href="https://instagram.com/xkcd">IG</a>
+      <a href="/books">Books</a>
+      <a href="/what-if-2">What If? 2</a>
+    </div>
     <div id="middleContainer" class="box">
       <div id="ctitle">Detector</div>
       <ul class="comicNav"><li><a href="/3087/">Prev</a></li></ul>
@@ -83,6 +95,7 @@ async function main() {
   assert(result.cleanedHtml.includes('<kbd>Ctrl</kbd>'), 'keeps keyboard shortcut markup')
   assert(result.cleanedHtml.includes('<var>cleanedHtml</var>'), 'keeps technical inline markup')
   assert(result.cleanedHtml.includes('loading="lazy"'), 'adds lazy loading for images')
+  assert(result.cleanerVersion === CLEANER_VERSION, 'returns cleaner version')
   assert(!result.cleanedHtml.includes('<script'), 'removes script tags')
   assert(!result.cleanedHtml.includes('Sidebar should not survive cleaning'), 'removes sidebar noise')
   assert(!result.cleanedHtml.includes('/archive'), 'removes navigation links')
@@ -103,6 +116,16 @@ async function main() {
   assert(!xkcd.cleanedHtml.includes('Comics I enjoy'), 'removes xkcd footer comic recommendations')
   assert(!xkcd.cleanedHtml.includes('Other things'), 'removes xkcd footer links')
   assert(!xkcd.cleanedHtml.includes('Netscape Navigator'), 'removes xkcd footer browser joke')
+  assert(!xkcd.cleanedHtml.includes('Archive'), 'removes xkcd archive navigation')
+  assert(!xkcd.cleanedHtml.includes('What If?'), 'removes xkcd what-if navigation')
+  assert(!xkcd.cleanedHtml.includes('About'), 'removes xkcd about navigation')
+  assert(!xkcd.cleanedHtml.includes('Feed'), 'removes xkcd feed navigation')
+  assert(!xkcd.cleanedHtml.includes('Email'), 'removes xkcd email navigation')
+  assert(!xkcd.cleanedHtml.includes('TW'), 'removes xkcd twitter navigation')
+  assert(!xkcd.cleanedHtml.includes('FB'), 'removes xkcd facebook navigation')
+  assert(!xkcd.cleanedHtml.includes('IG'), 'removes xkcd instagram navigation')
+  assert(!xkcd.cleanedHtml.includes('Books'), 'removes xkcd books navigation')
+  assert(xkcd.cleanerVersion === CLEANER_VERSION, 'xkcd cleaning returns cleaner version')
 
   console.log('Module B cleaning verification passed')
 }

@@ -1,4 +1,5 @@
 const { ArticleService } = require('../dist/main/services/ArticleService')
+const { CLEANER_VERSION } = require('../dist/main/services/CleaningService')
 
 const RAW_HTML = `
   <html>
@@ -11,12 +12,21 @@ const RAW_HTML = `
   </html>
 `
 
+const OLD_CLEANED_HTML = `
+  <article>
+    <p>Archive</p>
+    <p>What If?</p>
+    <p>stale cleaned cache</p>
+  </article>
+`
+
 async function main() {
   await verifiesStoredRawHtmlIsCleanedAndPersisted()
   await verifiesMissingRawHtmlIsFetchedBeforeCleaning()
   await verifiesAlreadyCleanedContentIsReturnedWithoutWork()
   await verifiesMissingArticleRaisesClearError()
   await verifiesFetchFailureDoesNotAttemptCleaning()
+  await verifiesStaleCleanerVersionIsRecleanedAndPersisted()
   console.log('Module B article service verification passed')
 }
 
@@ -37,6 +47,8 @@ async function verifiesStoredRawHtmlIsCleanedAndPersisted() {
   assert(content.cleanedMarkdown.includes('cleaned markdown'), 'returns persisted cleaned Markdown')
   assert(repository.upserts.length === 1, 'persists cleaned content once')
   assert(repository.upserts[0].rawHtml === RAW_HTML, 'keeps existing raw HTML when saving cleaned output')
+  assert(repository.upserts[0].cleanerVersion === CLEANER_VERSION, 'persists cleaner version')
+  assert(content.cleanerVersion === CLEANER_VERSION, 'returns current cleaner version')
 }
 
 async function verifiesMissingRawHtmlIsFetchedBeforeCleaning() {
@@ -70,7 +82,8 @@ async function verifiesAlreadyCleanedContentIsReturnedWithoutWork() {
   const repository = createRepository({
     rawHtml: RAW_HTML,
     cleanedHtml: '<article><p>already cleaned</p></article>',
-    cleanedMarkdown: 'already cleaned'
+    cleanedMarkdown: 'already cleaned',
+    cleanerVersion: CLEANER_VERSION
   })
 
   const cleaningService = createCleaningService()
@@ -126,7 +139,30 @@ async function verifiesFetchFailureDoesNotAttemptCleaning() {
   assert(repository.upserts.length === 0, 'does not persist partial content when fetching raw HTML fails')
 }
 
+async function verifiesStaleCleanerVersionIsRecleanedAndPersisted() {
+  const repository = createRepository({
+    rawHtml: RAW_HTML,
+    cleanedHtml: OLD_CLEANED_HTML,
+    cleanedMarkdown: 'Archive What If? stale markdown',
+    cleanerVersion: undefined
+  })
+
+  const cleaningService = createCleaningService()
+  const service = new ArticleService(repository, cleaningService)
+  const content = await service.getArticleContent('article-1')
+
+  assert(cleaningService.calls.length === 1, 'recleans cached content without cleaner version')
+  assert(repository.upserts.length === 1, 'persists refreshed cleaned content once')
+  assert(repository.upserts[0].cleanerVersion === CLEANER_VERSION, 'writes current cleaner version')
+  assert(content.cleanerVersion === CLEANER_VERSION, 'returns refreshed cleaner version')
+  assert(!content.cleanedHtml.includes('Archive'), 'does not return stale navigation noise')
+  assert(!content.cleanedHtml.includes('What If?'), 'does not return stale xkcd navigation noise')
+  assert(content.cleanedHtml.includes('cleaned article-1'), 'returns refreshed cleaned HTML')
+}
+
 function createRepository(initialContent) {
+  const initialCleanerVersion =
+    Object.prototype.hasOwnProperty.call(initialContent, 'cleanerVersion') ? initialContent.cleanerVersion : undefined
   const entry = {
     id: 'article-1',
     url: 'https://example.com/article-1'
@@ -141,6 +177,7 @@ function createRepository(initialContent) {
     rawHtml: initialContent.rawHtml ?? undefined,
     cleanedHtml: initialContent.cleanedHtml ?? undefined,
     cleanedMarkdown: initialContent.cleanedMarkdown ?? undefined,
+    cleanerVersion: initialCleanerVersion,
     tags: []
   }
 
@@ -165,6 +202,9 @@ function createRepository(initialContent) {
       if (content.cleanedMarkdown !== undefined && content.cleanedMarkdown !== null) {
         state.cleanedMarkdown = content.cleanedMarkdown
       }
+      if (content.cleanerVersion !== undefined && content.cleanerVersion !== null) {
+        state.cleanerVersion = content.cleanerVersion
+      }
     }
   }
 }
@@ -178,7 +218,8 @@ function createCleaningService() {
       calls.push({ rawHtml, url })
       return {
         cleanedHtml: `<article><p>cleaned article-1 from ${url}</p></article>`,
-        cleanedMarkdown: 'cleaned markdown'
+        cleanedMarkdown: 'cleaned markdown',
+        cleanerVersion: CLEANER_VERSION
       }
     }
   }

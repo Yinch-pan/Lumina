@@ -61,12 +61,15 @@ export function initDatabaseAtPath(dbPath: string): Database.Database {
       raw_html TEXT,
       cleaned_html TEXT,
       cleaned_markdown TEXT,
+      cleaner_version TEXT,
       fetched_at INTEGER,
       FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
     )
   `)
 
   // 创建 tags 表
+  migrateEntryContentsTable(db)
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS tags (
       id TEXT PRIMARY KEY,
@@ -140,11 +143,11 @@ export function initDatabaseAtPath(dbPath: string): Database.Database {
 }
 
 function migrateFeedsTable(db: Database.Database): void {
-  const addedFeedTitle = ensureColumn(db, 'feed_title', 'TEXT')
-  const addedCustomTitle = ensureColumn(db, 'custom_title', 'TEXT')
-  ensureColumn(db, 'refresh_interval_minutes', 'INTEGER NOT NULL DEFAULT 0')
-  ensureColumn(db, 'last_refreshed_at', 'INTEGER')
-  ensureColumn(db, 'last_error', 'TEXT')
+  const addedFeedTitle = ensureColumn(db, 'feeds', 'feed_title', 'TEXT')
+  const addedCustomTitle = ensureColumn(db, 'feeds', 'custom_title', 'TEXT')
+  ensureColumn(db, 'feeds', 'refresh_interval_minutes', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'feeds', 'last_refreshed_at', 'INTEGER')
+  ensureColumn(db, 'feeds', 'last_error', 'TEXT')
 
   db.exec(`
     UPDATE feeds
@@ -169,11 +172,15 @@ function migrateFeedsTable(db: Database.Database): void {
   }
 }
 
-function ensureColumn(db: Database.Database, columnName: string, definition: string): boolean {
-  const columns = db.prepare('PRAGMA table_info(feeds)').all() as Array<{ name: string }>
+function migrateEntryContentsTable(db: Database.Database): void {
+  ensureColumn(db, 'entry_contents', 'cleaner_version', 'TEXT')
+}
+
+function ensureColumn(db: Database.Database, tableName: string, columnName: string, definition: string): boolean {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>
   const exists = columns.some((column) => column.name === columnName)
   if (!exists) {
-    db.exec(`ALTER TABLE feeds ADD COLUMN ${columnName} ${definition}`)
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`)
     return true
   }
   return false

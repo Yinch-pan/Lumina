@@ -132,6 +132,8 @@ const CONTENT_SELECTORS = [
 
 const MIN_READABLE_TEXT_LENGTH = 120
 
+export const CLEANER_VERSION = 'module-b-cleaning-v3'
+
 export class CleaningService implements ICleaningService {
   private readonly turndown = new TurndownService({
     headingStyle: 'atx',
@@ -160,7 +162,8 @@ export class CleaningService implements ICleaningService {
         cleanedHtml,
         cleanedMarkdown,
         title: readable?.title?.trim() || undefined,
-        author: readable?.byline?.trim() || undefined
+        author: readable?.byline?.trim() || undefined,
+        cleanerVersion: CLEANER_VERSION
       }
     } catch {
       return this.buildFallback(html, url)
@@ -181,7 +184,8 @@ export class CleaningService implements ICleaningService {
     const fallbackHtml = sanitizeHtml(getFallbackHtml(rawHtml, url), SANITIZE_OPTIONS).trim()
     return {
       cleanedHtml: fallbackHtml,
-      cleanedMarkdown: this.toMarkdown(fallbackHtml)
+      cleanedMarkdown: this.toMarkdown(fallbackHtml),
+      cleanerVersion: CLEANER_VERSION
     }
   }
 }

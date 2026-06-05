@@ -1,6 +1,6 @@
 import { Repository } from '../database/repository'
 import { Article, ArticleContent } from '../types'
-import { CleaningService } from './CleaningService'
+import { CLEANER_VERSION, CleaningService } from './CleaningService'
 import { IArticleService, ICleaningService } from './interfaces'
 
 type FetchText = (url: string) => Promise<string>
@@ -65,13 +65,14 @@ export class ArticleService implements IArticleService {
       content = this.repository.getArticleContent(articleId)
     }
 
-    if (content?.rawHtml && (!content.cleanedHtml || !content.cleanedMarkdown)) {
+    if (content?.rawHtml && shouldCleanContent(content)) {
       const cleaned = await this.cleaningService.clean(content.rawHtml, entry.url)
       this.repository.upsertEntryContent({
         entryId: articleId,
         rawHtml: content.rawHtml,
         cleanedHtml: cleaned.cleanedHtml,
         cleanedMarkdown: cleaned.cleanedMarkdown,
+        cleanerVersion: cleaned.cleanerVersion ?? CLEANER_VERSION,
         fetchedAt: Date.now()
       })
       content = this.repository.getArticleContent(articleId)
@@ -95,6 +96,12 @@ export class ArticleService implements IArticleService {
   async markAsUnread(articleId: string): Promise<void> {
     this.repository.markAsUnread(articleId)
   }
+}
+
+function shouldCleanContent(content: ArticleContent): boolean {
+  return (
+    !content.cleanedHtml || !content.cleanedMarkdown || content.cleanerVersion !== CLEANER_VERSION
+  )
 }
 
 async function defaultFetchText(url: string): Promise<string> {

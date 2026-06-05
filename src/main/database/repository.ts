@@ -36,6 +36,7 @@ export interface EntryContentRecord {
   rawHtml?: string | null
   cleanedHtml?: string | null
   cleanedMarkdown?: string | null
+  cleanerVersion?: string | null
   fetchedAt?: number | null
 }
 
@@ -75,6 +76,7 @@ interface EntryContentRow {
   raw_html: string | null
   cleaned_html: string | null
   cleaned_markdown: string | null
+  cleaner_version: string | null
   fetched_at: number | null
   title: string
   author: string | null
@@ -298,6 +300,7 @@ export class Repository {
                 entry_contents.raw_html,
                 entry_contents.cleaned_html,
                 entry_contents.cleaned_markdown,
+                entry_contents.cleaner_version,
                 entry_contents.fetched_at,
                 entries.title,
                 entries.author,
@@ -322,6 +325,7 @@ export class Repository {
       rawHtml: row.raw_html ?? undefined,
       cleanedHtml: row.cleaned_html ?? undefined,
       cleanedMarkdown: row.cleaned_markdown ?? undefined,
+      cleanerVersion: row.cleaner_version ?? undefined,
       summary: '',
       translation: '',
       tags: this.getArticleTags(entryId).map((tag) => tag.name)
@@ -332,17 +336,18 @@ export class Repository {
     this.db
       .prepare(
         `INSERT INTO entry_contents (
-          entry_id, raw_html, cleaned_html, cleaned_markdown, fetched_at
+          entry_id, raw_html, cleaned_html, cleaned_markdown, cleaner_version, fetched_at
         ) VALUES (
-          @entryId, @rawHtml, @cleanedHtml, @cleanedMarkdown, @fetchedAt
+          @entryId, @rawHtml, @cleanedHtml, @cleanedMarkdown, @cleanerVersion, @fetchedAt
         )
         ON CONFLICT(entry_id) DO UPDATE SET
           raw_html = COALESCE(excluded.raw_html, entry_contents.raw_html),
           cleaned_html = COALESCE(excluded.cleaned_html, entry_contents.cleaned_html),
           cleaned_markdown = COALESCE(excluded.cleaned_markdown, entry_contents.cleaned_markdown),
+          cleaner_version = COALESCE(excluded.cleaner_version, entry_contents.cleaner_version),
           fetched_at = COALESCE(excluded.fetched_at, entry_contents.fetched_at)`
       )
-      .run(content)
+      .run({ ...content, cleanerVersion: content.cleanerVersion ?? null })
   }
 
   markAsRead(entryId: string): void {
