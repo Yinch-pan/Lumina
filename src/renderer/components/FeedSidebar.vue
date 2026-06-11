@@ -123,15 +123,15 @@ const formatLastRefresh = (value?: string) => {
 <style scoped>
 .feed-sidebar {
   width: 280px;
-  background: #ffffff;
-  border-right: 1px solid #e4e7ed;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-header {
   padding: 16px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-actions {

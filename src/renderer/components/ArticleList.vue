@@ -90,10 +90,11 @@ defineEmits<{
 <style scoped>
 .article-list {
   width: 380px;
-  background: #ffffff;
-  border-right: 1px solid #e4e7ed;
+  background: var(--card-bg);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  color: var(--text-color);
 }
 
 .list-header {

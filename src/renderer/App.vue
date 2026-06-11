@@ -35,7 +35,7 @@
     </div>
 
     <!-- 设置页面 -->
-    <SettingsView v-if="showSettings" @close="showSettings = false" />
+    <SettingsView v-if="showSettings" @close="showSettings = false" @settings-changed="applyReadingSettings" />
     <AddSubscriptionDialog
       v-if="showAddSubscription"
       :isLoading="isAddingFeed"
@@ -216,6 +216,8 @@ const selectedArticle = computed(() => {
 
 onMounted(() => {
   void loadFeeds()
+  void loadTags()
+  void applyReadingSettings()
 })
 
 const loadFeeds = async () => {
@@ -238,6 +240,34 @@ const loadFeeds = async () => {
     }
   } catch (error) {
     console.error('Failed to load feeds, fallback to mock data', error)
+  }
+}
+
+const loadTags = async () => {
+  if (!window.electronAPI) return
+  try {
+    const loaded = await window.electronAPI.getAllTags()
+    tags.value = [{ id: '__all', name: '全部', count: 0 }, ...loaded]
+  } catch (error) {
+    console.error('Failed to load tags', error)
+  }
+}
+
+const applyReadingSettings = async () => {
+  if (!window.electronAPI) return
+  try {
+    const fontSize = await window.electronAPI.getSetting('reading.fontSize')
+    const lineHeight = await window.electronAPI.getSetting('reading.lineHeight')
+    const theme = await window.electronAPI.getSetting('reading.theme')
+
+    const root = document.documentElement
+    if (fontSize) root.style.setProperty('--reading-font-size', fontSize + 'px')
+    if (lineHeight) root.style.setProperty('--reading-line-height', lineHeight)
+    if (theme) {
+      root.setAttribute('data-theme', theme)
+    }
+  } catch (error) {
+    console.error('Failed to apply reading settings', error)
   }
 }
 
@@ -696,11 +726,9 @@ const handleTagConfirm = async (tagName: string) => {
 
   try {
     await window.electronAPI.addTagToArticle(selectedArticleId.value, tagName)
-    // 重新加载文章内容以获取更新后的标签
     selectedArticleContent.value = await window.electronAPI.getArticleContent(selectedArticleId.value)
-    // 重新加载文章列表以更新标签
     articleList.value = await window.electronAPI.getArticleList(selectedFeedId.value)
-    alert('标签添加成功')
+    await loadTags()
   } catch (error) {
     console.error('Failed to add tag', error)
     alert(`添加标签失败：${error instanceof Error ? error.message : String(error)}`)

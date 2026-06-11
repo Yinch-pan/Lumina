@@ -99,7 +99,8 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
 <style scoped>
 .reader-view {
   flex: 1;
-  background: #ffffff;
+  background: var(--card-bg);
+  color: var(--text-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -195,6 +196,8 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
 .content-section {
   max-width: 820px;
   margin: 0 auto;
+  font-size: var(--reading-font-size, 16px);
+  line-height: var(--reading-line-height, 1.8);
 }
 
 .ai-section {

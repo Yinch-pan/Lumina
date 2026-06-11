@@ -108,7 +108,12 @@ async function main() {
   fs.rmSync(tempDir, { recursive: true, force: true })
 }
 
-main().catch((error) => {
-  console.error(error)
-  process.exitCode = 1
-})
+main()
+  .then(() => {
+    console.log('Services regression tests passed')
+    process.exit(0)
+  })
+  .catch((error) => {
+    console.error(error)
+    process.exit(1)
+  })

@@ -109,8 +109,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-defineEmits<{
+const emit = defineEmits<{
   'close': []
+  'settings-changed': []
 }>()
 
 const llmConfig = ref({
@@ -164,7 +165,11 @@ const saveLLMConfig = async () => {
   isSaving.value = true
   statusMessage.value = ''
   try {
-    await window.electronAPI.saveLLMConfig(llmConfig.value)
+    await window.electronAPI.saveLLMConfig({
+      baseUrl: llmConfig.value.baseUrl,
+      apiKey: llmConfig.value.apiKey,
+      model: llmConfig.value.model
+    })
     statusMessage.value = 'LLM 配置已保存'
   } catch (error) {
     console.error('Failed to save LLM config', error)
@@ -187,6 +192,7 @@ const saveReadingSettings = async () => {
     await window.electronAPI.saveSetting('reading.lineHeight', readingSettings.value.lineHeight)
     await window.electronAPI.saveSetting('reading.theme', readingSettings.value.theme)
     statusMessage.value = '阅读设置已保存'
+    emit('settings-changed')
   } catch (error) {
     console.error('Failed to save reading settings', error)
     statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
@@ -203,7 +209,8 @@ const saveReadingSettings = async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #ffffff;
+  background: var(--bg-color);
+  color: var(--text-color);
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -211,7 +218,7 @@ const saveReadingSettings = async () => {
 
 .settings-header {
   padding: 24px 32px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -250,7 +257,7 @@ const saveReadingSettings = async () => {
 }
 
 .settings-section {
-  background: #f8f9fa;
+  background: var(--hover-bg);
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
@@ -285,10 +292,12 @@ const saveReadingSettings = async () => {
 .form-select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
   transition: all 0.2s;
+  background: var(--card-bg);
+  color: var(--text-color);
 }
 
 .form-input:focus,
