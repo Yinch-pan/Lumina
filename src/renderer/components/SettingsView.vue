@@ -46,7 +46,8 @@
         <div class="form-hint">例如：gpt-4, gpt-3.5-turbo, claude-3-opus</div>
         </div>
 
-        <button class="btn-primary" @click="saveLLMConfig">保存 LLM 配置</button>
+        <button class="btn-primary" :disabled="isSaving" @click="saveLLMConfig">保存 LLM 配置</button>
+        <div v-if="statusMessage" class="form-hint">{{ statusMessage }}</div>
       </div>
 
       <!-- 阅读设置 -->
@@ -80,7 +81,7 @@
           </select>
         </div>
 
-        <button class="btn-primary" @click="saveReadingSettings">保存阅读设置</button>
+        <button class="btn-primary" :disabled="isSaving" @click="saveReadingSettings">保存阅读设置</button>
       </div>
 
     <!-- 应用信息 -->
@@ -124,6 +125,9 @@ const readingSettings = ref({
   theme: 'light'
 })
 
+const isSaving = ref(false)
+const statusMessage = ref('')
+
 onMounted(async () => {
   if (!window.electronAPI) {
     return
@@ -157,12 +161,16 @@ const saveLLMConfig = async () => {
     return
   }
 
+  isSaving.value = true
+  statusMessage.value = ''
   try {
     await window.electronAPI.saveLLMConfig(llmConfig.value)
-    alert('LLM 配置已保存')
+    statusMessage.value = 'LLM 配置已保存'
   } catch (error) {
     console.error('Failed to save LLM config', error)
-    alert(`保存失败：${error instanceof Error ? error.message : String(error)}`)
+    statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -172,14 +180,18 @@ const saveReadingSettings = async () => {
     return
   }
 
+  isSaving.value = true
+  statusMessage.value = ''
   try {
     await window.electronAPI.saveSetting('reading.fontSize', readingSettings.value.fontSize)
     await window.electronAPI.saveSetting('reading.lineHeight', readingSettings.value.lineHeight)
     await window.electronAPI.saveSetting('reading.theme', readingSettings.value.theme)
-    alert('阅读设置已保存')
+    statusMessage.value = '阅读设置已保存'
   } catch (error) {
     console.error('Failed to save reading settings', error)
-    alert(`保存失败：${error instanceof Error ? error.message : String(error)}`)
+    statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isSaving.value = false
   }
 }
 </script>

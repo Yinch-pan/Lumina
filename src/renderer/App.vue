@@ -638,12 +638,39 @@ const handleExportOpml = async () => {
   }
 }
 
-const handleSummarize = () => {
-  alert('AI 摘要功能（占位）')
+const handleSummarize = async () => {
+  if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
+    alert('请先选择一篇文章')
+    return
+  }
+
+  try {
+    const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value)
+    selectedArticleContent.value = { ...selectedArticleContent.value, summary }
+  } catch (error) {
+    console.error('Failed to summarize article', error)
+    alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
-const handleTranslate = () => {
-  alert('AI 翻译功能（占位）')
+const handleTranslate = async () => {
+  if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
+    alert('请先选择一篇文章')
+    return
+  }
+
+  const targetLang = prompt('请输入目标语言', '中文')
+  if (!targetLang) {
+    return
+  }
+
+  try {
+    const translation = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
+    selectedArticleContent.value = { ...selectedArticleContent.value, translation }
+  } catch (error) {
+    console.error('Failed to translate article', error)
+    alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
 const handleAddTag = () => {
