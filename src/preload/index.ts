@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   markArticleUnread: (articleId: string) => ipcRenderer.invoke('mark-article-unread', articleId),
 
   // 模块 C: AI 摘要与翻译
+  cleanArticle: (articleId: string) => ipcRenderer.invoke('clean-article', articleId),
   summarizeArticle: (articleId: string) => ipcRenderer.invoke('summarize-article', articleId),
   translateArticle: (articleId: string, targetLang: string) =>
     ipcRenderer.invoke('translate-article', articleId, targetLang),

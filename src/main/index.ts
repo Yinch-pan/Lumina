@@ -7,7 +7,9 @@ import { CleaningService } from './services/CleaningService'
 import { ExportService } from './services/ExportService'
 import { FeedService } from './services/FeedService'
 import { SettingsService } from './services/SettingsService'
+import { SummaryService } from './services/SummaryService'
 import { TagService } from './services/TagService'
+import { TranslationService } from './services/TranslationService'
 import { LLMConfig, OpmlFeed } from './types'
 
 let mainWindow: BrowserWindow | null = null
@@ -16,6 +18,8 @@ let articleService: ArticleService | null = null
 let tagService: TagService | null = null
 let exportService: ExportService | null = null
 let settingsService: SettingsService | null = null
+let summaryService: SummaryService | null = null
+let translationService: TranslationService | null = null
 let autoRefreshTimer: NodeJS.Timeout | null = null
 
 const AUTO_REFRESH_CHECK_INTERVAL_MS = 60 * 1000
@@ -172,6 +176,17 @@ function registerIpcHandlers() {
   ipcMain.handle('save-setting', async (_event, key: string, value: string) =>
     getSettingsService().saveSetting(key, value)
   )
+
+  // 模块 C: AI 功能
+  ipcMain.handle('clean-article', async (_event, articleId: string) =>
+    cloneForIpc(await getArticleService().getArticleContent(articleId))
+  )
+  ipcMain.handle('summarize-article', async (_event, articleId: string) =>
+    cloneForIpc(await getSummaryService().summarize(articleId))
+  )
+  ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) =>
+    cloneForIpc(await getTranslationService().translate(articleId, targetLang))
+  )
 }
 
 function initializeServices() {
@@ -183,6 +198,8 @@ function initializeServices() {
   tagService = new TagService(repository)
   exportService = new ExportService(repository, articleService)
   settingsService = new SettingsService(repository)
+  summaryService = new SummaryService(repository, () => getSettingsService().getLLMConfig())
+  translationService = new TranslationService(repository, () => getSettingsService().getLLMConfig())
   startAutoRefreshScheduler()
 }
 
@@ -218,6 +235,20 @@ function getSettingsService(): SettingsService {
     throw new Error('SettingsService is not initialized')
   }
   return settingsService
+}
+
+function getSummaryService(): SummaryService {
+  if (!summaryService) {
+    throw new Error('SummaryService is not initialized')
+  }
+  return summaryService
+}
+
+function getTranslationService(): TranslationService {
+  if (!translationService) {
+    throw new Error('TranslationService is not initialized')
+  }
+  return translationService
 }
 
 function cloneForIpc<T>(value: T): T {
