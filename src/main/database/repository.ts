@@ -88,6 +88,10 @@ interface TagRow {
   count: number
 }
 
+interface AgentRunRow {
+  output_text: string | null
+}
+
 export class Repository {
   constructor(private readonly db: Database.Database) {}
 
@@ -322,8 +326,8 @@ export class Repository {
       rawHtml: row.raw_html ?? undefined,
       cleanedHtml: row.cleaned_html ?? undefined,
       cleanedMarkdown: row.cleaned_markdown ?? undefined,
-      summary: '',
-      translation: '',
+      summary: this.getLatestAgentOutput(entryId, 'summary') ?? '',
+      translation: this.getLatestAgentOutput(entryId, 'translation') ?? '',
       tags: this.getArticleTags(entryId).map((tag) => tag.name)
     }
   }
@@ -537,6 +541,73 @@ export class Repository {
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
       )
       .run(key, value, now)
+  }
+
+  // ============ AI Agent Runs ================
+
+  createAgentRun(run: {
+    id: string
+    entryId: string
+    agentType: 'summary' | 'translation'
+    inputText: string
+    outputText: string
+    status: string
+    errorMessage?: string | null
+    startedAt: number
+    completedAt?: number | null
+  }): void {
+    this.db
+      .prepare(
+        `INSERT INTO agent_runs (
+          id, entry_id, agent_type, input_text, output_text, status, error_message, started_at, completed_at
+        ) VALUES (
+          @id, @entryId, @agentType, @inputText, @outputText, @status, @errorMessage, @startedAt, @completedAt
+        )`
+      )
+      .run({
+        ...run,
+        errorMessage: run.errorMessage ?? null,
+        completedAt: run.completedAt ?? null
+      })
+  }
+
+  createLLMUsage(usage: {
+    id: string
+    agentRunId: string
+    model: string
+    promptTokens?: number | null
+    completionTokens?: number | null
+    totalTokens?: number | null
+    createdAt: number
+  }): void {
+    this.db
+      .prepare(
+        `INSERT INTO llm_usage (
+          id, agent_run_id, model, prompt_tokens, completion_tokens, total_tokens, created_at
+        ) VALUES (
+          @id, @agentRunId, @model, @promptTokens, @completionTokens, @totalTokens, @createdAt
+        )`
+      )
+      .run({
+        ...usage,
+        promptTokens: usage.promptTokens ?? null,
+        completionTokens: usage.completionTokens ?? null,
+        totalTokens: usage.totalTokens ?? null
+      })
+  }
+
+  private getLatestAgentOutput(entryId: string, agentType: 'summary' | 'translation'): string | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT output_text
+         FROM agent_runs
+         WHERE entry_id = ? AND agent_type = ? AND status = 'completed'
+         ORDER BY COALESCE(completed_at, started_at) DESC
+         LIMIT 1`
+      )
+      .get(entryId, agentType) as AgentRunRow | undefined
+
+    return row?.output_text ?? undefined
   }
 }
 
