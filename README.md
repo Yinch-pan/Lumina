@@ -66,6 +66,19 @@ npm run dev
 npm run dev:electron
 ```
 
+### 验证与测试
+
+```bash
+# 编译所有代码（主进程 + 渲染进程）
+npm run build
+
+# 运行服务层回归测试
+npm run test:services
+
+# 运行模块 B 内容清洗验证
+npm run verify:module-b
+```
+
 ### 构建打包
 
 ```bash
