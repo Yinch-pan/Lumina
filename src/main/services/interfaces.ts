@@ -1,4 +1,13 @@
-import { Feed, Article, ArticleContent, Tag, LLMConfig, OpmlFeed, OpmlImportResult } from '../types'
+import {
+  Feed,
+  Article,
+  ArticleContent,
+  Tag,
+  LLMConfig,
+  OpmlFeed,
+  OpmlImportResult,
+  CleanedContent
+} from '../types'
 
 /**
  * Feed 服务接口
@@ -79,13 +88,7 @@ export interface IArticleService {
  * 负责正文抓取、HTML 清洗、Markdown 转换
  */
 export interface ICleaningService {
-  // 抓取并清洗文章内容
-  cleanArticle(articleId: string, url: string): Promise<{
-    cleanedHtml: string
-    cleanedMarkdown: string
-    title?: string
-    author?: string
-  }>
+  clean(rawHtml: string, url: string): Promise<CleanedContent>
 }
 
 /**

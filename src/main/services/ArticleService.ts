@@ -1,5 +1,6 @@
 import { Repository } from '../database/repository'
 import { Article, ArticleContent } from '../types'
+import { CleaningService } from './CleaningService'
 import { IArticleService, ICleaningService } from './interfaces'
 
 type FetchText = (url: string) => Promise<string>
@@ -7,11 +8,23 @@ type FetchText = (url: string) => Promise<string>
 const DEFAULT_USER_AGENT = 'Mercury/1.0 RSS Reader'
 
 export class ArticleService implements IArticleService {
+  private readonly cleaningService: ICleaningService
+  private readonly fetchText: FetchText
+
   constructor(
     private readonly repository: Repository,
-    private readonly cleaningService: ICleaningService,
-    private readonly fetchText: FetchText = defaultFetchText
-  ) {}
+    cleaningServiceOrFetchText: ICleaningService | FetchText = new CleaningService(),
+    fetchText: FetchText = defaultFetchText
+  ) {
+    if (typeof cleaningServiceOrFetchText === 'function') {
+      this.cleaningService = new CleaningService()
+      this.fetchText = cleaningServiceOrFetchText
+      return
+    }
+
+    this.cleaningService = cleaningServiceOrFetchText
+    this.fetchText = fetchText
+  }
 
   async getArticlesByFeed(feedId: string): Promise<Article[]> {
     return this.repository.getArticlesByFeed(feedId)
@@ -40,9 +53,27 @@ export class ArticleService implements IArticleService {
       throw new Error(`Article content cannot be loaded: ${articleId}`)
     }
 
-    // 如果没有清洗后的 HTML，则调用 CleaningService 进行清洗
-    if (!content.cleanedHtml) {
-      const cleaned = await this.cleaningService.cleanArticle(articleId, entry.url)
+    if (!content.rawHtml) {
+      const rawHtml = await this.fetchText(entry.url)
+      this.repository.upsertEntryContent({
+        entryId: articleId,
+        rawHtml,
+        cleanedHtml: null,
+        cleanedMarkdown: null,
+        fetchedAt: Date.now()
+      })
+      content = this.repository.getArticleContent(articleId)
+    }
+
+    if (content?.rawHtml && (!content.cleanedHtml || !content.cleanedMarkdown)) {
+      const cleaned = await this.cleaningService.clean(content.rawHtml, entry.url)
+      this.repository.upsertEntryContent({
+        entryId: articleId,
+        rawHtml: content.rawHtml,
+        cleanedHtml: cleaned.cleanedHtml,
+        cleanedMarkdown: cleaned.cleanedMarkdown,
+        fetchedAt: Date.now()
+      })
       content = this.repository.getArticleContent(articleId)
     }
 

@@ -177,7 +177,7 @@ function registerIpcHandlers() {
 function initializeServices() {
   const database = initDatabase()
   const repository = new Repository(database)
-  const cleaningService = new CleaningService(repository)
+  const cleaningService = new CleaningService()
   feedService = new FeedService(repository)
   articleService = new ArticleService(repository, cleaningService)
   tagService = new TagService(repository)
