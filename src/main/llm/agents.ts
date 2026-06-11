@@ -3,9 +3,10 @@
  * 封装基于 LLMProvider 的智能代理，如摘要、翻译等
  */
 
-import type { LLMProvider, Message, ChatOptions } from './provider'
+import type { LLMProvider, LLMResponse, Message, ChatOptions } from './provider'
 import type { LLMProviderConfig } from './config'
-import { renderPrompt, SummaryPromptTemplate } from './config'
+import { renderPrompt, SummaryPromptTemplate, TranslationPromptTemplate } from './config'
+import { OpenAICompatibleProvider } from './provider'
 
 /**
  * 摘要生成选项
@@ -36,11 +37,6 @@ export class SummaryAgent {
     if (provider) {
       this.provider = provider
     } else {
-      // 动态导入避免循环依赖
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { OpenAICompatibleProvider } = require('./provider') as {
-        OpenAICompatibleProvider: new (config: LLMProviderConfig) => LLMProvider
-      }
       this.provider = new OpenAICompatibleProvider(config)
     }
   }
@@ -50,10 +46,21 @@ export class SummaryAgent {
    * @param markdown 文章的 Markdown 内容
    * @param options 可选的摘要选项
    * @returns 摘要字符串
+   */
+  async summarize(markdown: string, options?: SummaryOptions): Promise<string> {
+    const response = await this.summarizeWithUsage(markdown, options)
+    return response.content
+  }
+
+  /**
+   * 非流式摘要生成（含用量信息）
+   * @param markdown 文章的 Markdown 内容
+   * @param options 可选的摘要选项
+   * @returns LLMResponse，含 content 和 usage
    * @throws Error 当 markdown 为空时抛出 "Markdown content cannot be empty"
    * @throws Error 当模板渲染或 API 调用失败时重新抛出
    */
-  async summarize(markdown: string, options?: SummaryOptions): Promise<string> {
+  async summarizeWithUsage(markdown: string, options?: SummaryOptions): Promise<LLMResponse> {
     if (!markdown || markdown.trim() === '') {
       throw new Error('Markdown content cannot be empty')
     }
@@ -76,8 +83,7 @@ export class SummaryAgent {
     }
 
     try {
-      const response = await this.provider.chat(messages, chatOptions)
-      return response.content
+      return await this.provider.chat(messages, chatOptions)
     } catch (err) {
       throw new Error(`Summary generation failed: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -88,8 +94,6 @@ export class SummaryAgent {
    * @param markdown 文章的 Markdown 内容
    * @param options 可选的摘要选项
    * @returns 异步迭代器，逐块返回摘要文本
-   * @throws Error 当 markdown 为空时抛出 "Markdown content cannot be empty"
-   * @throws Error 当模板渲染失败时重新抛出
    */
   async *summarizeStream(markdown: string, options?: SummaryOptions): AsyncIterable<string> {
     if (!markdown || markdown.trim() === '') {
@@ -114,5 +118,42 @@ export class SummaryAgent {
     }
 
     yield* this.provider.streamChat(messages, chatOptions)
+  }
+}
+
+export interface TranslationOptions {
+  title?: string
+  temperature?: number
+  maxTokens?: number
+}
+
+export class TranslationAgent {
+  private provider: LLMProvider
+
+  constructor(config: LLMProviderConfig, provider?: LLMProvider) {
+    this.provider = provider ?? new OpenAICompatibleProvider(config)
+  }
+
+  async translate(markdown: string, targetLang: string, options?: TranslationOptions): Promise<string> {
+    const response = await this.translateWithUsage(markdown, targetLang, options)
+    return response.content
+  }
+
+  async translateWithUsage(markdown: string, targetLang: string, options?: TranslationOptions): Promise<LLMResponse> {
+    if (!markdown || markdown.trim() === '') {
+      throw new Error('Markdown content cannot be empty')
+    }
+
+    const prompt = renderPrompt(TranslationPromptTemplate, {
+      title: options?.title ?? 'Untitled',
+      targetLang,
+      content: markdown
+    })
+    const messages: Message[] = [{ role: 'user', content: prompt }]
+    const chatOptions: ChatOptions = {
+      temperature: options?.temperature,
+      maxTokens: options?.maxTokens
+    }
+    return await this.provider.chat(messages, chatOptions)
   }
 }

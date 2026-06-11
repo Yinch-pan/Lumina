@@ -25,8 +25,20 @@ export const SummaryPromptTemplate = `你是一个专业的文章摘要助手。
 2. 长度控制在 200 字以内
 3. 使用客观、简洁的语言`
 
+export const TranslationPromptTemplate = `你是一个专业翻译助手。请将以下文章翻译为{targetLang}，保留 Markdown 结构和链接。
+
+文章标题：{title}
+文章内容：
+{content}
+
+要求：
+1. 忠实表达原文含义
+2. 保留标题、列表、代码块和链接格式
+3. 只输出译文，不要添加解释`
+
 /**
  * 从 config.json 加载 LLM 配置
+ * @deprecated Use configGetter pattern instead to avoid reading local secret files
  * @returns LLMProviderConfig 配置对象
  */
 export function loadConfig(): LLMProviderConfig {

@@ -1,20 +1,20 @@
 import { randomUUID } from 'crypto'
 import { Repository } from '../database/repository'
-import { SummaryAgent } from '../llm/agents'
+import { TranslationAgent } from '../llm/agents'
 import { LLMConfig } from '../types'
-import { ISummaryService } from './interfaces'
+import { ITranslationService } from './interfaces'
 
-export class SummaryService implements ISummaryService {
+export class TranslationService implements ITranslationService {
   constructor(
     private readonly repository: Repository,
     private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
   ) {}
 
-  async summarize(articleId: string): Promise<string> {
+  async translate(articleId: string, targetLang: string): Promise<string> {
     if (!articleId.trim()) {
       throw new Error('Article ID cannot be empty')
     }
-
+    const normalizedTargetLang = targetLang.trim() || '中文'
     const content = this.repository.getArticleContent(articleId)
     if (!content) {
       throw new Error(`Article not found: ${articleId}`)
@@ -29,15 +29,15 @@ export class SummaryService implements ISummaryService {
     const runId = randomUUID()
     try {
       const config = await this.getConfig()
-      const agent = new SummaryAgent(config)
-      const response = await agent.summarizeWithUsage(markdown, { title: content.title })
-      const summary = response.content
+      const agent = new TranslationAgent(config)
+      const response = await agent.translateWithUsage(markdown, normalizedTargetLang, { title: content.title })
+      const translation = response.content
       this.repository.createAgentRun({
         id: runId,
         entryId: articleId,
-        agentType: 'summary',
+        agentType: 'translation',
         inputText: markdown,
-        outputText: summary,
+        outputText: translation,
         status: 'completed',
         startedAt,
         completedAt: Date.now()
@@ -53,12 +53,12 @@ export class SummaryService implements ISummaryService {
           createdAt: Date.now()
         })
       }
-      return summary
+      return translation
     } catch (error) {
       this.repository.createAgentRun({
         id: runId,
         entryId: articleId,
-        agentType: 'summary',
+        agentType: 'translation',
         inputText: markdown,
         outputText: '',
         status: 'failed',
