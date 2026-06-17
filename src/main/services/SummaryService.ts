@@ -1,89 +1,72 @@
-/**
- * SummaryService
- * 实现 ISummaryService 接口，集成 SummaryAgent 生成文章摘要
- */
-
-import { ISummaryService } from './interfaces'
+import { randomUUID } from 'crypto'
+import { Repository } from '../database/repository'
 import { SummaryAgent } from '../llm/agents'
-import type { LLMProviderConfig } from '../llm/config'
-import type { Repository } from '../database/repository'
-import type { ICleaningService } from './interfaces'
+import { LLMConfig } from '../types'
+import { ISummaryService } from './interfaces'
 
 export class SummaryService implements ISummaryService {
-  private agent: SummaryAgent
-  private repository: Repository
-  private cleaningService: ICleaningService
-
-  /**
-   * 创建 SummaryService 实例
-   * @param config LLM 配置（baseUrl / apiKey / model）
-   * @param repository 数据仓库
-   * @param cleaningService 内容清洗服务
-   * @param agent 可选的 SummaryAgent 实例（用于 mock 测试），
-   *              若未提供则自动创建
-   */
   constructor(
-    config: LLMProviderConfig,
-    repository: Repository,
-    cleaningService: ICleaningService,
-    agent?: SummaryAgent
-  ) {
-    this.repository = repository
-    this.cleaningService = cleaningService
-    this.agent = agent ?? new SummaryAgent(config)
-  }
+    private readonly repository: Repository,
+    private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
+  ) {}
 
-  /**
-   * 生成文章摘要
-   * @param articleId 文章 ID
-   * @returns 摘要字符串
-   * @throws Error 当 articleId 为空时抛出 "Article ID cannot be empty"
-   * @throws Error 当文章内容为空时抛出 "Article content not found"
-   * @throws Error 当摘要生成失败时重新抛出
-   */
   async summarize(articleId: string): Promise<string> {
-    // 验证 articleId 不为空
-    if (!articleId || articleId.trim() === '') {
+    if (!articleId.trim()) {
       throw new Error('Article ID cannot be empty')
     }
 
-    // 获取文章内容
     const content = this.repository.getArticleContent(articleId)
     if (!content) {
-      throw new Error('Article content not found')
+      throw new Error(`Article not found: ${articleId}`)
     }
 
-    // 获取 cleaned Markdown
-    let markdown = content.cleanedMarkdown
-    if (!markdown) {
-      // 如果没有 cleaned Markdown，尝试清洗 rawHtml
-      if (content.rawHtml) {
-        const cleaned = await this.cleaningService.clean(content.rawHtml, content.sourceUrl)
-        markdown = cleaned.cleanedMarkdown
-      } else {
-        throw new Error('Article content is empty')
-      }
+    const markdown = content.cleanedMarkdown || content.rawHtml
+    if (!markdown || !markdown.trim()) {
+      throw new Error('文章内容为空，请先打开文章抓取正文')
     }
 
-    // 保存运行记录
-    const agentRunId = this.repository.saveAgentRun(articleId, 'summary', markdown)
-
+    const startedAt = Date.now()
+    const runId = randomUUID()
     try {
-      // 调用 SummaryAgent 生成摘要
-      const summary = await this.agent.summarize(markdown, {
-        title: content.title
+      const config = await this.getConfig()
+      const agent = new SummaryAgent(config)
+      const response = await agent.summarizeWithUsage(markdown, { title: content.title })
+      const summary = response.content
+      this.repository.createAgentRun({
+        id: runId,
+        entryId: articleId,
+        agentType: 'summary',
+        inputText: markdown,
+        outputText: summary,
+        status: 'completed',
+        startedAt,
+        completedAt: Date.now()
       })
-
-      // 更新运行状态为成功
-      this.repository.updateAgentRunStatus(agentRunId, 'completed', summary)
-
+      if (response.usage) {
+        this.repository.createLLMUsage({
+          id: randomUUID(),
+          agentRunId: runId,
+          model: config.model,
+          promptTokens: response.usage.promptTokens,
+          completionTokens: response.usage.completionTokens,
+          totalTokens: response.usage.promptTokens + response.usage.completionTokens,
+          createdAt: Date.now()
+        })
+      }
       return summary
-    } catch (err) {
-      // 更新运行状态为失败
-      this.repository.updateAgentRunStatus(agentRunId, 'failed', undefined, err instanceof Error ? err.message : String(err))
-      throw new Error(
-        `Failed to generate summary for article "${articleId}": ${err instanceof Error ? err.message : String(err)}`
-      )
+    } catch (error) {
+      this.repository.createAgentRun({
+        id: runId,
+        entryId: articleId,
+        agentType: 'summary',
+        inputText: markdown,
+        outputText: '',
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        startedAt,
+        completedAt: Date.now()
+      })
+      throw error
     }
   }
 }

@@ -1,21 +1,54 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# 启动 Vite 开发服务器
-npm run dev &
+# Mercury 开发辅助脚本
+# 一键启动 Vite + Electron，适用于 bash 环境（Git Bash / WSL / Linux / macOS）。
+# Windows 用户也可以直接在两个终端中分别运行 npm run dev 和 npm run dev:electron。
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
+VITE_HOST="${VITE_HOST:-127.0.0.1}"
+VITE_PORT="${VITE_PORT:-5173}"
+VITE_LOG="${VITE_LOG:-/tmp/mercury-vite.log}"
+
+cleanup() {
+  if [[ -n "${VITE_PID:-}" ]] && kill -0 "$VITE_PID" 2>/dev/null; then
+    kill "$VITE_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+echo "[Mercury] 构建主进程..."
+npm run build:main
+
+echo "[Mercury] 启动 Vite（端口 ${VITE_PORT}）..."
+: > "$VITE_LOG"
+npm run dev -- --host "$VITE_HOST" --port "$VITE_PORT" > "$VITE_LOG" 2>&1 &
 VITE_PID=$!
 
-# 等待 Vite 启动并获取实际端口
-echo "等待 Vite 启动..."
-sleep 3
+# 等待 Vite 就绪（最多 30 秒）
+for _ in $(seq 1 60); do
+  if grep -q 'Local:' "$VITE_LOG" 2>/dev/null; then
+    break
+  fi
+  if ! kill -0 "$VITE_PID" 2>/dev/null; then
+    echo "[Mercury] Vite 启动失败，日志如下："
+    cat "$VITE_LOG"
+    exit 1
+  fi
+  sleep 0.5
+done
 
-# 检测 Vite 实际使用的端口
-VITE_PORT=$(lsof -ti:5173 -sTCP:LISTEN 2>/dev/null || lsof -ti:5174 -sTCP:LISTEN 2>/dev/null || echo "5173")
-export VITE_DEV_SERVER_URL="http://localhost:${VITE_PORT}"
+VITE_DEV_SERVER_URL="$(sed -nE 's/.*Local:[[:space:]]+(http:\/\/[^[:space:]]+).*/\1/p' "$VITE_LOG" | tail -n 1)"
+if [[ -z "$VITE_DEV_SERVER_URL" ]]; then
+  echo "[Mercury] 未能解析 Vite 地址，日志如下："
+  cat "$VITE_LOG"
+  exit 1
+fi
+export VITE_DEV_SERVER_URL
 
-echo "Vite 运行在端口: ${VITE_PORT}"
+echo "[Mercury] Vite 地址: $VITE_DEV_SERVER_URL"
+echo "[Mercury] 关闭窗口或按 Ctrl+C 即可退出。"
 
-# 构建并启动 Electron
-npm run dev:electron
-
-# 清理
-kill $VITE_PID 2>/dev/null
+./node_modules/.bin/electron . --dev "$@"

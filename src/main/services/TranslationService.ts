@@ -1,98 +1,72 @@
-/**
- * TranslationService
- * 实现 ITranslationService 接口，集成 TranslationAgent 生成文章翻译
- */
-
-import { ITranslationService } from './interfaces'
+import { randomUUID } from 'crypto'
+import { Repository } from '../database/repository'
 import { TranslationAgent } from '../llm/agents'
-import type { LLMProviderConfig } from '../llm/config'
-import type { Repository } from '../database/repository'
-import type { ICleaningService } from './interfaces'
+import { LLMConfig } from '../types'
+import { ITranslationService } from './interfaces'
 
 export class TranslationService implements ITranslationService {
-  private agent: TranslationAgent
-  private repository: Repository
-  private cleaningService: ICleaningService
-
-  /**
-   * 创建 TranslationService 实例
-   * @param config LLM 配置（baseUrl / apiKey / model）
-   * @param repository 数据仓库
-   * @param cleaningService 内容清洗服务
-   * @param agent 可选的 TranslationAgent 实例（用于 mock 测试），
-   *              若未提供则自动创建
-   */
   constructor(
-    config: LLMProviderConfig,
-    repository: Repository,
-    cleaningService: ICleaningService,
-    agent?: TranslationAgent
-  ) {
-    this.repository = repository
-    this.cleaningService = cleaningService
-    this.agent = agent ?? new TranslationAgent(config)
-  }
+    private readonly repository: Repository,
+    private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
+  ) {}
 
-  /**
-   * 翻译文章
-   * @param articleId 文章 ID
-   * @param targetLang 目标语言（如 'en', 'ja', 'ko'）
-   * @returns 翻译后的字符串
-   * @throws Error 当 articleId 为空时抛出 "Article ID cannot be empty"
-   * @throws Error 当 targetLang 为空时抛出 "Target language cannot be empty"
-   * @throws Error 当文章内容为空时抛出 "Article content not found"
-   * @throws Error 当翻译生成失败时重新抛出
-   */
   async translate(articleId: string, targetLang: string): Promise<string> {
-    // 验证参数
-    if (!articleId || articleId.trim() === '') {
+    if (!articleId.trim()) {
       throw new Error('Article ID cannot be empty')
     }
-    if (!targetLang || targetLang.trim() === '') {
-      throw new Error('Target language cannot be empty')
-    }
-
-    // 获取文章内容
+    const normalizedTargetLang = targetLang.trim() || '中文'
     const content = this.repository.getArticleContent(articleId)
     if (!content) {
-      throw new Error('Article content not found')
+      throw new Error(`Article not found: ${articleId}`)
     }
 
-    // 获取 cleaned Markdown
-    let markdown = content.cleanedMarkdown
-    if (!markdown) {
-      // 如果没有 cleaned Markdown，尝试清洗 rawHtml
-      if (content.rawHtml) {
-        const cleaned = await this.cleaningService.clean(content.rawHtml, content.sourceUrl)
-        markdown = cleaned.cleanedMarkdown
-      } else {
-        throw new Error('Article content is empty')
-      }
+    const markdown = content.cleanedMarkdown || content.rawHtml
+    if (!markdown || !markdown.trim()) {
+      throw new Error('文章内容为空，请先打开文章抓取正文')
     }
 
-    // 保存运行记录
-    const agentRunId = this.repository.saveAgentRun(articleId, 'translation', markdown)
-
+    const startedAt = Date.now()
+    const runId = randomUUID()
     try {
-      // 调用 TranslationAgent 生成翻译
-      const translation = await this.agent.translate(markdown, targetLang, {
-        title: content.title
+      const config = await this.getConfig()
+      const agent = new TranslationAgent(config)
+      const response = await agent.translateWithUsage(markdown, normalizedTargetLang, { title: content.title })
+      const translation = response.content
+      this.repository.createAgentRun({
+        id: runId,
+        entryId: articleId,
+        agentType: 'translation',
+        inputText: markdown,
+        outputText: translation,
+        status: 'completed',
+        startedAt,
+        completedAt: Date.now()
       })
-
-      // 更新运行状态为成功
-      this.repository.updateAgentRunStatus(agentRunId, 'completed', translation)
-
-      // 记录 token 用量（如果有的话）
-      // 注意：当前实现中 LLMResponse 不返回 usage，这里预留接口
-      // this.repository.saveLLMUsage(agentRunId, model, promptTokens, completionTokens, totalTokens)
-
+      if (response.usage) {
+        this.repository.createLLMUsage({
+          id: randomUUID(),
+          agentRunId: runId,
+          model: config.model,
+          promptTokens: response.usage.promptTokens,
+          completionTokens: response.usage.completionTokens,
+          totalTokens: response.usage.promptTokens + response.usage.completionTokens,
+          createdAt: Date.now()
+        })
+      }
       return translation
-    } catch (err) {
-      // 更新运行状态为失败
-      this.repository.updateAgentRunStatus(agentRunId, 'failed', undefined, err instanceof Error ? err.message : String(err))
-      throw new Error(
-        `Failed to generate translation for article "${articleId}": ${err instanceof Error ? err.message : String(err)}`
-      )
+    } catch (error) {
+      this.repository.createAgentRun({
+        id: runId,
+        entryId: articleId,
+        agentType: 'translation',
+        inputText: markdown,
+        outputText: '',
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        startedAt,
+        completedAt: Date.now()
+      })
+      throw error
     }
   }
 }

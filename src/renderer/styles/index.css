@@ -4,10 +4,34 @@
   box-sizing: border-box;
 }
 
+:root {
+  --reading-font-size: 16px;
+  --reading-line-height: 1.8;
+  --bg-color: #f5f7fa;
+  --text-color: #2c3e50;
+  --sidebar-bg: #ffffff;
+  --card-bg: #ffffff;
+  --border-color: #e4e7ed;
+  --hover-bg: #f0f2f5;
+  --secondary-text: #606266;
+  --muted-text: #909399;
+}
+
+[data-theme="dark"] {
+  --bg-color: #1a1a2e;
+  --text-color: #e0e0e0;
+  --sidebar-bg: #16213e;
+  --card-bg: #1f2940;
+  --border-color: #2a3a5e;
+  --hover-bg: #253352;
+  --secondary-text: #a0a8b8;
+  --muted-text: #7a8299;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  background: #f5f7fa;
-  color: #2c3e50;
+  background: var(--bg-color);
+  color: var(--text-color);
   height: 100vh;
   overflow: hidden;
 }
@@ -22,14 +46,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--hover-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1;
+  background: var(--muted-text);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--secondary-text);
 }

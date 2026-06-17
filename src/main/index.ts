@@ -177,26 +177,19 @@ function registerIpcHandlers() {
     getSettingsService().saveSetting(key, value)
   )
 
-  // 模块 C: AI 摘要与翻译
-  ipcMain.handle('summarize-article', async (_event, articleId: string) => {
-    try {
-      const summary = await getSummaryService().summarize(articleId)
-      return { success: true, summary }
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
-    }
-  })
-  ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) => {
-    try {
-      const translation = await getTranslationService().translate(articleId, targetLang)
-      return { success: true, translation }
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
-    }
-  })
+  // 模块 C: AI 功能
+  ipcMain.handle('clean-article', async (_event, articleId: string) =>
+    cloneForIpc(await getArticleService().getArticleContent(articleId))
+  )
+  ipcMain.handle('summarize-article', async (_event, articleId: string) =>
+    cloneForIpc(await getSummaryService().summarize(articleId))
+  )
+  ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) =>
+    cloneForIpc(await getTranslationService().translate(articleId, targetLang))
+  )
 }
 
-async function initializeServices() {
+function initializeServices() {
   const database = initDatabase()
   const repository = new Repository(database)
   const cleaningService = new CleaningService()
@@ -205,12 +198,8 @@ async function initializeServices() {
   tagService = new TagService(repository)
   exportService = new ExportService(repository, articleService)
   settingsService = new SettingsService(repository)
-
-  // 初始化 AI 服务（需要从 SettingsService 获取 LLM 配置）
-  const llmConfig = await settingsService.getLLMConfig()
-  summaryService = new SummaryService(llmConfig, repository, cleaningService)
-  translationService = new TranslationService(llmConfig, repository, cleaningService)
-
+  summaryService = new SummaryService(repository, () => getSettingsService().getLLMConfig())
+  translationService = new TranslationService(repository, () => getSettingsService().getLLMConfig())
   startAutoRefreshScheduler()
 }
 

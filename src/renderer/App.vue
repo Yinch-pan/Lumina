@@ -35,7 +35,7 @@
     </div>
 
     <!-- 设置页面 -->
-    <SettingsView v-if="showSettings" @close="showSettings = false" />
+    <SettingsView v-if="showSettings" @close="showSettings = false" @settings-changed="applyReadingSettings" />
     <AddSubscriptionDialog
       v-if="showAddSubscription"
       :isLoading="isAddingFeed"
@@ -179,8 +179,6 @@ const useMockData = ref(true)
 const articleFilter = ref<ArticleFilter>('all')
 const isLoadingArticles = ref(false)
 const isRefreshing = ref(false)
-const isSummarizing = ref(false)
-const isTranslating = ref(false)
 const showAddSubscription = ref(false)
 const isAddingFeed = ref(false)
 const feedDialogError = ref('')
@@ -218,6 +216,8 @@ const selectedArticle = computed(() => {
 
 onMounted(() => {
   void loadFeeds()
+  void loadTags()
+  void applyReadingSettings()
 })
 
 const loadFeeds = async () => {
@@ -240,6 +240,34 @@ const loadFeeds = async () => {
     }
   } catch (error) {
     console.error('Failed to load feeds, fallback to mock data', error)
+  }
+}
+
+const loadTags = async () => {
+  if (!window.electronAPI) return
+  try {
+    const loaded = await window.electronAPI.getAllTags()
+    tags.value = [{ id: '__all', name: '全部', count: 0 }, ...loaded]
+  } catch (error) {
+    console.error('Failed to load tags', error)
+  }
+}
+
+const applyReadingSettings = async () => {
+  if (!window.electronAPI) return
+  try {
+    const fontSize = await window.electronAPI.getSetting('reading.fontSize')
+    const lineHeight = await window.electronAPI.getSetting('reading.lineHeight')
+    const theme = await window.electronAPI.getSetting('reading.theme')
+
+    const root = document.documentElement
+    if (fontSize) root.style.setProperty('--reading-font-size', fontSize + 'px')
+    if (lineHeight) root.style.setProperty('--reading-line-height', lineHeight)
+    if (theme) {
+      root.setAttribute('data-theme', theme)
+    }
+  } catch (error) {
+    console.error('Failed to apply reading settings', error)
   }
 }
 
@@ -641,64 +669,37 @@ const handleExportOpml = async () => {
 }
 
 const handleSummarize = async () => {
-  if (!window.electronAPI || !selectedArticleId.value) {
-    alert('当前环境不支持 AI 摘要或未选择文章')
+  if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
+    alert('请先选择一篇文章')
     return
   }
 
-  isSummarizing.value = true
   try {
-    const result = await window.electronAPI.summarizeArticle(selectedArticleId.value)
-    if (result.success) {
-      // 更新文章内容
-      if (selectedArticleContent.value) {
-        selectedArticleContent.value.summary = result.summary
-      }
-      // 重新加载文章内容以获取更新后的摘要
-      selectedArticleContent.value = await window.electronAPI.getArticleContent(selectedArticleId.value)
-      alert('摘要生成成功')
-    } else {
-      alert(`摘要生成失败：${result.error}`)
-    }
+    const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value)
+    selectedArticleContent.value = { ...selectedArticleContent.value, summary }
   } catch (error) {
     console.error('Failed to summarize article', error)
     alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
-  } finally {
-    isSummarizing.value = false
   }
 }
 
 const handleTranslate = async () => {
-  if (!window.electronAPI || !selectedArticleId.value) {
-    alert('当前环境不支持 AI 翻译或未选择文章')
+  if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
+    alert('请先选择一篇文章')
     return
   }
 
-  // 弹出语言选择对话框
-  const targetLang = prompt('请输入目标语言代码（如 en, ja, ko）：')
+  const targetLang = prompt('请输入目标语言', '中文')
   if (!targetLang) {
     return
   }
 
-  isTranslating.value = true
   try {
-    const result = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
-    if (result.success) {
-      // 更新文章内容
-      if (selectedArticleContent.value) {
-        selectedArticleContent.value.translation = result.translation
-      }
-      // 重新加载文章内容以获取更新后的翻译
-      selectedArticleContent.value = await window.electronAPI.getArticleContent(selectedArticleId.value)
-      alert('翻译生成成功')
-    } else {
-      alert(`翻译生成失败：${result.error}`)
-    }
+    const translation = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
+    selectedArticleContent.value = { ...selectedArticleContent.value, translation }
   } catch (error) {
     console.error('Failed to translate article', error)
-    alert(`翻译生成失败：${error instanceof Error ? error.message : String(error)}`)
-  } finally {
-    isTranslating.value = false
+    alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -725,11 +726,9 @@ const handleTagConfirm = async (tagName: string) => {
 
   try {
     await window.electronAPI.addTagToArticle(selectedArticleId.value, tagName)
-    // 重新加载文章内容以获取更新后的标签
     selectedArticleContent.value = await window.electronAPI.getArticleContent(selectedArticleId.value)
-    // 重新加载文章列表以更新标签
     articleList.value = await window.electronAPI.getArticleList(selectedFeedId.value)
-    alert('标签添加成功')
+    await loadTags()
   } catch (error) {
     console.error('Failed to add tag', error)
     alert(`添加标签失败：${error instanceof Error ? error.message : String(error)}`)

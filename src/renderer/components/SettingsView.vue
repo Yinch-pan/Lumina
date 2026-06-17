@@ -46,7 +46,8 @@
         <div class="form-hint">例如：gpt-4, gpt-3.5-turbo, claude-3-opus</div>
         </div>
 
-        <button class="btn-primary" @click="saveLLMConfig">保存 LLM 配置</button>
+        <button class="btn-primary" :disabled="isSaving" @click="saveLLMConfig">保存 LLM 配置</button>
+        <div v-if="statusMessage" class="form-hint">{{ statusMessage }}</div>
       </div>
 
       <!-- 阅读设置 -->
@@ -80,7 +81,7 @@
           </select>
         </div>
 
-        <button class="btn-primary" @click="saveReadingSettings">保存阅读设置</button>
+        <button class="btn-primary" :disabled="isSaving" @click="saveReadingSettings">保存阅读设置</button>
       </div>
 
     <!-- 应用信息 -->
@@ -108,8 +109,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-defineEmits<{
+const emit = defineEmits<{
   'close': []
+  'settings-changed': []
 }>()
 
 const llmConfig = ref({
@@ -123,6 +125,9 @@ const readingSettings = ref({
   lineHeight: '1.8',
   theme: 'light'
 })
+
+const isSaving = ref(false)
+const statusMessage = ref('')
 
 onMounted(async () => {
   if (!window.electronAPI) {
@@ -157,12 +162,20 @@ const saveLLMConfig = async () => {
     return
   }
 
+  isSaving.value = true
+  statusMessage.value = ''
   try {
-    await window.electronAPI.saveLLMConfig(llmConfig.value)
-    alert('LLM 配置已保存')
+    await window.electronAPI.saveLLMConfig({
+      baseUrl: llmConfig.value.baseUrl,
+      apiKey: llmConfig.value.apiKey,
+      model: llmConfig.value.model
+    })
+    statusMessage.value = 'LLM 配置已保存'
   } catch (error) {
     console.error('Failed to save LLM config', error)
-    alert(`保存失败：${error instanceof Error ? error.message : String(error)}`)
+    statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -172,14 +185,19 @@ const saveReadingSettings = async () => {
     return
   }
 
+  isSaving.value = true
+  statusMessage.value = ''
   try {
     await window.electronAPI.saveSetting('reading.fontSize', readingSettings.value.fontSize)
     await window.electronAPI.saveSetting('reading.lineHeight', readingSettings.value.lineHeight)
     await window.electronAPI.saveSetting('reading.theme', readingSettings.value.theme)
-    alert('阅读设置已保存')
+    statusMessage.value = '阅读设置已保存'
+    emit('settings-changed')
   } catch (error) {
     console.error('Failed to save reading settings', error)
-    alert(`保存失败：${error instanceof Error ? error.message : String(error)}`)
+    statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isSaving.value = false
   }
 }
 </script>
@@ -191,7 +209,8 @@ const saveReadingSettings = async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #ffffff;
+  background: var(--bg-color);
+  color: var(--text-color);
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -199,7 +218,7 @@ const saveReadingSettings = async () => {
 
 .settings-header {
   padding: 24px 32px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -238,7 +257,7 @@ const saveReadingSettings = async () => {
 }
 
 .settings-section {
-  background: #f8f9fa;
+  background: var(--hover-bg);
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
@@ -273,10 +292,12 @@ const saveReadingSettings = async () => {
 .form-select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
   transition: all 0.2s;
+  background: var(--card-bg);
+  color: var(--text-color);
 }
 
 .form-input:focus,

@@ -74,6 +74,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
     this.client = new OpenAI({
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
+      timeout: 180_000,
     })
   }
 
