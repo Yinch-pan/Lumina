@@ -14,6 +14,8 @@ export function initDatabase(): Database.Database {
 
 export function initDatabaseAtPath(dbPath: string): Database.Database {
   const db = new Database(dbPath)
+  db.pragma('journal_mode = WAL')
+  db.pragma('busy_timeout = 5000')
   db.pragma('foreign_keys = ON')
 
   // 创建 feeds 表
@@ -136,6 +138,7 @@ export function initDatabaseAtPath(dbPath: string): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_agent_runs_entry_id ON agent_runs(entry_id);
   `)
 
+  runMigrations(db)
   return db
 }
 
@@ -177,4 +180,72 @@ function ensureColumn(db: Database.Database, columnName: string, definition: str
     return true
   }
   return false
+}
+
+type Migration = (db: Database.Database) => void
+
+// 有序迁移列表。索引 0 对应 user_version 1。只追加，永不修改已有项。
+const MIGRATIONS: Migration[] = [
+  // v1: 文章星标 + 滚动进度
+  (db) => {
+    ensureEntryColumn(db, 'is_starred', 'INTEGER NOT NULL DEFAULT 0')
+    ensureEntryColumn(db, 'scroll_percent', 'REAL NOT NULL DEFAULT 0')
+  },
+  // v2: 高亮/笔记表
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS highlights (
+        id TEXT PRIMARY KEY,
+        entry_id TEXT NOT NULL,
+        selected_text TEXT NOT NULL,
+        prefix_text TEXT,
+        suffix_text TEXT,
+        color TEXT NOT NULL DEFAULT 'yellow',
+        note TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
+      )
+    `)
+    db.exec('CREATE INDEX IF NOT EXISTS idx_highlights_entry_id ON highlights(entry_id)')
+  },
+  // v3: FTS5 全文索引(contentless，rowid 对齐 entries.rowid)
+  (db) => {
+    db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
+        title, excerpt, content,
+        content='', tokenize='unicode61'
+      )
+    `)
+    const rows = db.prepare(`
+      SELECT entries.rowid AS rowid, entries.title AS title,
+             entries.excerpt AS excerpt,
+             COALESCE(entry_contents.cleaned_markdown, '') AS content
+      FROM entries
+      LEFT JOIN entry_contents ON entry_contents.entry_id = entries.id
+    `).all() as Array<{ rowid: number; title: string | null; excerpt: string | null; content: string | null }>
+    const insert = db.prepare('INSERT INTO entries_fts (rowid, title, excerpt, content) VALUES (?, ?, ?, ?)')
+    const tx = db.transaction(() => {
+      for (const row of rows) insert.run(row.rowid, row.title ?? '', row.excerpt ?? '', row.content ?? '')
+    })
+    tx()
+  },
+]
+
+function runMigrations(db: Database.Database): void {
+  const current = Number((db.pragma('user_version', { simple: true })) ?? 0)
+  for (let version = current; version < MIGRATIONS.length; version++) {
+    const migrate = MIGRATIONS[version]
+    const tx = db.transaction(() => {
+      migrate(db)
+      db.pragma(`user_version = ${version + 1}`)
+    })
+    tx()
+  }
+}
+
+function ensureEntryColumn(db: Database.Database, columnName: string, definition: string): void {
+  const columns = db.prepare('PRAGMA table_info(entries)').all() as Array<{ name: string }>
+  if (!columns.some((c) => c.name === columnName)) {
+    db.exec(`ALTER TABLE entries ADD COLUMN ${columnName} ${definition}`)
+  }
 }
