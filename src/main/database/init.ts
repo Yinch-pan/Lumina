@@ -223,7 +223,7 @@ const MIGRATIONS: Migration[] = [
       FROM entries
       LEFT JOIN entry_contents ON entry_contents.entry_id = entries.id
     `).all() as Array<{ rowid: number; title: string | null; excerpt: string | null; content: string | null }>
-    const insert = db.prepare('INSERT INTO entries_fts (rowid, title, excerpt, content) VALUES (?, ?, ?, ?)')
+    const insert = db.prepare('INSERT OR IGNORE INTO entries_fts (rowid, title, excerpt, content) VALUES (?, ?, ?, ?)')
     const tx = db.transaction(() => {
       for (const row of rows) insert.run(row.rowid, row.title ?? '', row.excerpt ?? '', row.content ?? '')
     })
