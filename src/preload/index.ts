@@ -60,5 +60,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveLLMConfig: (config: { baseUrl?: string; apiKey?: string; model?: string }) =>
     ipcRenderer.invoke('save-llm-config', config),
   getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
-  saveSetting: (key: string, value: string) => ipcRenderer.invoke('save-setting', key, value)
+  saveSetting: (key: string, value: string) => ipcRenderer.invoke('save-setting', key, value),
+  getLLMUsageStats: () => ipcRenderer.invoke('get-llm-usage-stats')
 })

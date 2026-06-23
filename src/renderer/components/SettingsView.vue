@@ -84,7 +84,42 @@
         <button class="btn-primary" :disabled="isSaving" @click="saveReadingSettings">保存阅读设置</button>
       </div>
 
-    <!-- 应用信息 -->
+      <!-- LLM 用量统计 -->
+      <div class="settings-section">
+        <h2 class="section-title">📊 AI 用量统计</h2>
+        <div class="section-description">
+          查看 AI 摘要和翻译的使用情况
+        </div>
+
+        <div class="usage-stats">
+          <div class="stat-item">
+            <span class="stat-label">总调用次数</span>
+            <span class="stat-value">{{ usageStats.totalCalls }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">总 Token 数</span>
+            <span class="stat-value">{{ usageStats.totalTokens.toLocaleString() }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">摘要次数</span>
+            <span class="stat-value">{{ usageStats.summaryCalls }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">翻译次数</span>
+            <span class="stat-value">{{ usageStats.translationCalls }}</span>
+          </div>
+        </div>
+
+        <div v-if="usageStats.byModel.length > 0" class="model-stats">
+          <h3 class="subsection-title">按模型统计</h3>
+          <div v-for="model in usageStats.byModel" :key="model.model" class="model-item">
+            <span class="model-name">{{ model.model }}</span>
+            <span class="model-stats-text">{{ model.calls }} 次调用, {{ model.tokens.toLocaleString() }} tokens</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 应用信息 -->
       <div class="settings-section">
       <h2 class="section-title">ℹ️ 关于 Mercury</h2>
         <div class="info-item">
@@ -129,6 +164,14 @@ const readingSettings = ref({
 const isSaving = ref(false)
 const statusMessage = ref('')
 
+const usageStats = ref({
+  totalCalls: 0,
+  totalTokens: 0,
+  summaryCalls: 0,
+  translationCalls: 0,
+  byModel: [] as Array<{ model: string; calls: number; tokens: number }>
+})
+
 onMounted(async () => {
   if (!window.electronAPI) {
     return
@@ -151,6 +194,10 @@ onMounted(async () => {
     if (fontSize) readingSettings.value.fontSize = fontSize
     if (lineHeight) readingSettings.value.lineHeight = lineHeight
     if (theme) readingSettings.value.theme = theme
+
+    // 加载 LLM 用量统计
+    const stats = await window.electronAPI.getLLMUsageStats()
+    usageStats.value = stats
   } catch (error) {
     console.error('Failed to load settings', error)
   }
@@ -359,5 +406,67 @@ const saveReadingSettings = async () => {
 
 .info-link:hover {
   text-decoration: underline;
+}
+
+.usage-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.model-stats {
+  margin-top: 16px;
+}
+
+.subsection-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.model-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.model-item:last-child {
+  border-bottom: none;
+}
+
+.model-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.model-stats-text {
+  font-size: 14px;
+  color: #606266;
 }
 </style>

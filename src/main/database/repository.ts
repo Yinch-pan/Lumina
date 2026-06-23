@@ -609,6 +609,54 @@ export class Repository {
 
     return row?.output_text ?? undefined
   }
+
+  getLLMUsageStats(): {
+    totalCalls: number
+    totalTokens: number
+    summaryCalls: number
+    translationCalls: number
+    byModel: Array<{ model: string; calls: number; tokens: number }>
+  } {
+    const totalRow = this.db
+      .prepare(
+        `SELECT COUNT(*) as calls, COALESCE(SUM(total_tokens), 0) as tokens
+         FROM llm_usage`
+      )
+      .get() as { calls: number; tokens: number }
+
+    const summaryRow = this.db
+      .prepare(
+        `SELECT COUNT(*) as calls
+         FROM agent_runs
+         WHERE agent_type = 'summary' AND status = 'completed'`
+      )
+      .get() as { calls: number }
+
+    const translationRow = this.db
+      .prepare(
+        `SELECT COUNT(*) as calls
+         FROM agent_runs
+         WHERE agent_type = 'translation' AND status = 'completed'`
+      )
+      .get() as { calls: number }
+
+    const byModel = this.db
+      .prepare(
+        `SELECT model, COUNT(*) as calls, COALESCE(SUM(total_tokens), 0) as tokens
+         FROM llm_usage
+         GROUP BY model
+         ORDER BY calls DESC`
+      )
+      .all() as Array<{ model: string; calls: number; tokens: number }>
+
+    return {
+      totalCalls: totalRow.calls,
+      totalTokens: totalRow.tokens,
+      summaryCalls: summaryRow.calls,
+      translationCalls: translationRow.calls,
+      byModel
+    }
+  }
 }
 
 function normalizeNullableTitle(value?: string | null): string | null {

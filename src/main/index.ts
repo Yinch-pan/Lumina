@@ -176,6 +176,7 @@ function registerIpcHandlers() {
   ipcMain.handle('save-setting', async (_event, key: string, value: string) =>
     getSettingsService().saveSetting(key, value)
   )
+  ipcMain.handle('get-llm-usage-stats', async () => cloneForIpc(await getSettingsService().getLLMUsageStats()))
 
   // 模块 C: AI 功能
   ipcMain.handle('clean-article', async (_event, articleId: string) =>

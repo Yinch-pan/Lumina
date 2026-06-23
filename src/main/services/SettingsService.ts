@@ -40,4 +40,14 @@ export class SettingsService implements ISettingsService {
   async saveSetting(key: string, value: string): Promise<void> {
     this.repository.setSetting(key, value)
   }
+
+  async getLLMUsageStats(): Promise<{
+    totalCalls: number
+    totalTokens: number
+    summaryCalls: number
+    translationCalls: number
+    byModel: Array<{ model: string; calls: number; tokens: number }>
+  }> {
+    return this.repository.getLLMUsageStats()
+  }
 }
