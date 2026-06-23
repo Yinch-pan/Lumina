@@ -240,11 +240,11 @@ onMounted(() => {
   // 监听 AI 流式内容
   if (window.electronAPI?.onAIChunk) {
     removeAIChunkListener = window.electronAPI.onAIChunk((data) => {
-      // 只处理当前文章的 chunk
-      if (streamingContent.value?.articleId !== selectedArticleId.value) {
+      // 如果没有流式内容或文章不匹配，忽略
+      if (!streamingContent.value || streamingContent.value.articleId !== selectedArticleId.value) {
         return
       }
-      if (streamingContent.value?.type === data.type) {
+      if (streamingContent.value.type === data.type) {
         streamingContent.value.content += data.chunk
       }
     })
