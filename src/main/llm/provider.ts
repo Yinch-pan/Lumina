@@ -98,7 +98,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
         messages: this.toOpenAIMessages(messages),
         temperature: options?.temperature,
         max_tokens: options?.maxTokens,
-      })
+        // 禁用思考模式（DeepSeek 默认开启，ECNU 默认关闭）
+        thinking: { type: 'disabled' },
+      } as any)
 
       const choice = response.choices[0]
       return {
@@ -129,9 +131,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
         temperature: options?.temperature,
         max_tokens: options?.maxTokens,
         stream: true,
-      })
+        // 禁用思考模式（DeepSeek 默认开启，ECNU 默认关闭）
+        thinking: { type: 'disabled' },
+      } as any) as unknown as AsyncIterable<any>
 
       for await (const chunk of stream) {
+        // 忽略 reasoning_content（思考模式输出），只返回 content
         const delta = chunk.choices[0]?.delta?.content
         if (delta) {
           yield delta
