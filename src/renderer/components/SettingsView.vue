@@ -258,9 +258,8 @@ const fetchModels = async () => {
   try {
     const models = await window.electronAPI.fetchLLMModels()
     availableModels.value = models
-    if (models.length > 0 && !models.includes(llmConfig.value.model)) {
-      llmConfig.value.model = models[0]
-    }
+    // 清空当前模型，强制用户从列表中选择
+    llmConfig.value.model = models.length > 0 ? models[0] : ''
   } catch (error) {
     console.error('Failed to fetch models', error)
     modelError.value = `获取失败：${error instanceof Error ? error.message : String(error)}`
