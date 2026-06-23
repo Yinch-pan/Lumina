@@ -5,6 +5,8 @@ import { LLMConfig } from '../types'
 import { ISummaryService } from './interfaces'
 
 export class SummaryService implements ISummaryService {
+  private static readonly MAX_RETRIES = 3
+
   constructor(
     private readonly repository: Repository,
     private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
@@ -25,48 +27,56 @@ export class SummaryService implements ISummaryService {
       throw new Error('文章内容为空，请先打开文章抓取正文')
     }
 
-    const startedAt = Date.now()
-    const runId = randomUUID()
-    try {
-      const config = await this.getConfig()
-      const agent = new SummaryAgent(config)
-      const response = await agent.summarizeWithUsage(markdown, { title: content.title })
-      const summary = response.content
-      this.repository.createAgentRun({
-        id: runId,
-        entryId: articleId,
-        agentType: 'summary',
-        inputText: markdown,
-        outputText: summary,
-        status: 'completed',
-        startedAt,
-        completedAt: Date.now()
-      })
-      if (response.usage) {
-        this.repository.createLLMUsage({
-          id: randomUUID(),
-          agentRunId: runId,
-          model: config.model,
-          promptTokens: response.usage.promptTokens,
-          completionTokens: response.usage.completionTokens,
-          totalTokens: response.usage.promptTokens + response.usage.completionTokens,
-          createdAt: Date.now()
+    let lastError: Error | null = null
+    for (let attempt = 1; attempt <= SummaryService.MAX_RETRIES; attempt++) {
+      const startedAt = Date.now()
+      const runId = randomUUID()
+      try {
+        const config = await this.getConfig()
+        const agent = new SummaryAgent(config)
+        const response = await agent.summarizeWithUsage(markdown, { title: content.title })
+        const summary = response.content
+        this.repository.createAgentRun({
+          id: runId,
+          entryId: articleId,
+          agentType: 'summary',
+          inputText: markdown,
+          outputText: summary,
+          status: 'completed',
+          startedAt,
+          completedAt: Date.now()
         })
+        if (response.usage) {
+          this.repository.createLLMUsage({
+            id: randomUUID(),
+            agentRunId: runId,
+            model: config.model,
+            promptTokens: response.usage.promptTokens,
+            completionTokens: response.usage.completionTokens,
+            totalTokens: response.usage.promptTokens + response.usage.completionTokens,
+            createdAt: Date.now()
+          })
+        }
+        return summary
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+        this.repository.createAgentRun({
+          id: runId,
+          entryId: articleId,
+          agentType: 'summary',
+          inputText: markdown,
+          outputText: '',
+          status: 'failed',
+          errorMessage: `Attempt ${attempt}/${SummaryService.MAX_RETRIES}: ${lastError.message}`,
+          startedAt,
+          completedAt: Date.now()
+        })
+        if (attempt < SummaryService.MAX_RETRIES) {
+          console.warn(`Summary attempt ${attempt} failed, retrying...`, lastError.message)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        }
       }
-      return summary
-    } catch (error) {
-      this.repository.createAgentRun({
-        id: runId,
-        entryId: articleId,
-        agentType: 'summary',
-        inputText: markdown,
-        outputText: '',
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
-        startedAt,
-        completedAt: Date.now()
-      })
-      throw error
     }
+    throw lastError || new Error('Summary generation failed after all retries')
   }
 }
