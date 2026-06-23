@@ -326,6 +326,13 @@ const handleSelectFeed = async (feedId: string) => {
   selectedFeedId.value = feedId
   selectedArticleId.value = ''
   selectedArticleContent.value = null
+  
+  // 重置 AI 状态
+  isSummarizing.value = false
+  isTranslating.value = false
+  aiProgress.value = null
+  streamingContent.value = null
+
   await loadArticles(feedId)
 }
 
@@ -335,6 +342,13 @@ const handleSelectTag = (tagName: string) => {
 
 const handleSelectArticle = async (articleId: string) => {
   selectedArticleId.value = articleId
+  
+  // 重置 AI 状态
+  isSummarizing.value = false
+  isTranslating.value = false
+  aiProgress.value = null
+  streamingContent.value = null
+
   if (!window.electronAPI || useMockData.value) {
     selectedArticleContent.value = mockArticleContent
     return
