@@ -195,6 +195,24 @@ function registerIpcHandlers() {
     }
     return cloneForIpc(await getTranslationService().translate(articleId, targetLang, onProgress))
   })
+  ipcMain.handle('summarize-article-stream', async (event, articleId: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    const onChunk = (chunk: string) => {
+      event.sender.send('ai-chunk', { type: 'summary', chunk })
+    }
+    return cloneForIpc(await getSummaryService().summarizeStream(articleId, onProgress, onChunk))
+  })
+  ipcMain.handle('translate-article-stream', async (event, articleId: string, targetLang: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    const onChunk = (chunk: string) => {
+      event.sender.send('ai-chunk', { type: 'translation', chunk })
+    }
+    return cloneForIpc(await getTranslationService().translateStream(articleId, targetLang, onProgress, onChunk))
+  })
 }
 
 function initializeServices() {

@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   summarizeArticle: (articleId: string) => ipcRenderer.invoke('summarize-article', articleId),
   translateArticle: (articleId: string, targetLang: string) =>
     ipcRenderer.invoke('translate-article', articleId, targetLang),
+  summarizeArticleStream: (articleId: string) => ipcRenderer.invoke('summarize-article-stream', articleId),
+  translateArticleStream: (articleId: string, targetLang: string) =>
+    ipcRenderer.invoke('translate-article-stream', articleId, targetLang),
 
   // 模块 D: 标签管理
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
@@ -67,5 +70,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: any, data: any) => callback(data)
     ipcRenderer.on('ai-progress', handler)
     return () => ipcRenderer.removeListener('ai-progress', handler)
+  },
+  onAIChunk: (callback: (data: { type: string; chunk: string }) => void) => {
+    const handler = (_event: any, data: any) => callback(data)
+    ipcRenderer.on('ai-chunk', handler)
+    return () => ipcRenderer.removeListener('ai-chunk', handler)
   }
 })

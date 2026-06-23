@@ -29,6 +29,7 @@
         :isSummarizing="isSummarizing"
         :isTranslating="isTranslating"
         :aiProgress="aiProgress"
+        :streamingContent="streamingContent"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -198,7 +199,9 @@ const opmlImportProgress = ref<OpmlImportProgressItem[]>([])
 const isSummarizing = ref(false)
 const isTranslating = ref(false)
 const aiProgress = ref<{ type: string; attempt: number; maxAttempts: number; error?: string } | null>(null)
+const streamingContent = ref<{ type: string; content: string } | null>(null)
 let removeAIProgressListener: (() => void) | null = null
+let removeAIChunkListener: (() => void) | null = null
 
 const articles = computed(() => {
   let filteredArticles = articleList.value
@@ -233,10 +236,22 @@ onMounted(() => {
       aiProgress.value = data
     })
   }
+
+  // 监听 AI 流式内容
+  if (window.electronAPI?.onAIChunk) {
+    removeAIChunkListener = window.electronAPI.onAIChunk((data) => {
+      if (streamingContent.value?.type === data.type) {
+        streamingContent.value.content += data.chunk
+      } else {
+        streamingContent.value = { type: data.type, content: data.chunk }
+      }
+    })
+  }
 })
 
 onUnmounted(() => {
   removeAIProgressListener?.()
+  removeAIChunkListener?.()
 })
 
 const loadFeeds = async () => {
@@ -695,8 +710,9 @@ const handleSummarize = async () => {
 
   isSummarizing.value = true
   aiProgress.value = null
+  streamingContent.value = { type: 'summary', content: '' }
   try {
-    const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value)
+    const summary = await window.electronAPI.summarizeArticleStream(selectedArticleId.value)
     selectedArticleContent.value = { ...selectedArticleContent.value, summary }
   } catch (error) {
     console.error('Failed to summarize article', error)
@@ -704,6 +720,7 @@ const handleSummarize = async () => {
   } finally {
     isSummarizing.value = false
     aiProgress.value = null
+    streamingContent.value = null
   }
 }
 
@@ -715,8 +732,9 @@ const handleTranslate = async (targetLang: string = '中文') => {
 
   isTranslating.value = true
   aiProgress.value = null
+  streamingContent.value = { type: 'translation', content: '' }
   try {
-    const translation = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
+    const translation = await window.electronAPI.translateArticleStream(selectedArticleId.value, targetLang)
     selectedArticleContent.value = { ...selectedArticleContent.value, translation }
   } catch (error) {
     console.error('Failed to translate article', error)
@@ -724,6 +742,7 @@ const handleTranslate = async (targetLang: string = '中文') => {
   } finally {
     isTranslating.value = false
     aiProgress.value = null
+    streamingContent.value = null
   }
 }
 

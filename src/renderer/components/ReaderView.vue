@@ -65,7 +65,10 @@
               </span>
               <span v-else>&#27491;&#22312;&#29983;&#25104;&#25688;&#35201;...</span>
             </div>
-            <div v-else class="ai-content">{{ article.summary }}</div>
+            <div v-if="streamingContent && streamingContent.type === 'summary'" class="ai-content streaming">
+              {{ streamingContent.content }}<span class="cursor">|</span>
+            </div>
+            <div v-else-if="!isSummarizing" class="ai-content">{{ article.summary }}</div>
           </section>
 
           <!-- AI 翻译区域 -->
@@ -84,7 +87,10 @@
               </span>
               <span v-else>&#27491;&#22312;&#29983;&#25104;&#32763;&#35793;...</span>
             </div>
-            <div v-else class="ai-content">{{ article.translation }}</div>
+            <div v-if="streamingContent && streamingContent.type === 'translation'" class="ai-content streaming">
+              {{ streamingContent.content }}<span class="cursor">|</span>
+            </div>
+            <div v-else-if="!isTranslating" class="ai-content">{{ article.translation }}</div>
           </section>
 
           <article v-if="hasCleanedHtml" class="article-content" v-html="article.cleanedHtml"></article>
@@ -125,6 +131,7 @@ const props = defineProps<{
   isSummarizing?: boolean
   isTranslating?: boolean
   aiProgress?: { type: string; attempt: number; maxAttempts: number; error?: string } | null
+  streamingContent?: { type: string; content: string } | null
 }>()
 
 defineEmits<{
@@ -304,6 +311,19 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
 .retry-error {
   color: #f56c6c;
   font-size: 12px;
+}
+
+.ai-content.streaming {
+  min-height: 60px;
+}
+
+.cursor {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }
 
 .loading-spinner {

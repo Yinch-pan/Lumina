@@ -90,4 +90,76 @@ export class SummaryService implements ISummaryService {
     }
     throw lastError || new Error('Summary generation failed after all retries')
   }
+
+  async summarizeStream(
+    articleId: string,
+    onProgress?: (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => void,
+    onChunk?: (chunk: string) => void
+  ): Promise<string> {
+    if (!articleId.trim()) {
+      throw new Error('Article ID cannot be empty')
+    }
+
+    const content = this.repository.getArticleContent(articleId)
+    if (!content) {
+      throw new Error(`Article not found: ${articleId}`)
+    }
+
+    const markdown = content.cleanedMarkdown || content.rawHtml
+    if (!markdown || !markdown.trim()) {
+      throw new Error('文章内容为空，请先打开文章抓取正文')
+    }
+
+    let lastError: Error | null = null
+    for (let attempt = 1; attempt <= SummaryService.MAX_RETRIES; attempt++) {
+      const startedAt = Date.now()
+      const runId = randomUUID()
+      try {
+        if (attempt > 1) {
+          onProgress?.({ type: 'summary', attempt, maxAttempts: SummaryService.MAX_RETRIES })
+        }
+        const config = await this.getConfig()
+        const agent = new SummaryAgent(config)
+        let summary = ''
+        for await (const chunk of agent.summarizeStream(markdown, { title: content.title })) {
+          summary += chunk
+          onChunk?.(chunk)
+        }
+        this.repository.createAgentRun({
+          id: runId,
+          entryId: articleId,
+          agentType: 'summary',
+          inputText: markdown,
+          outputText: summary,
+          status: 'completed',
+          startedAt,
+          completedAt: Date.now()
+        })
+        return summary
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+        this.repository.createAgentRun({
+          id: runId,
+          entryId: articleId,
+          agentType: 'summary',
+          inputText: markdown,
+          outputText: '',
+          status: 'failed',
+          errorMessage: `Attempt ${attempt}/${SummaryService.MAX_RETRIES}: ${lastError.message}`,
+          startedAt,
+          completedAt: Date.now()
+        })
+        if (attempt < SummaryService.MAX_RETRIES) {
+          onProgress?.({
+            type: 'summary',
+            attempt,
+            maxAttempts: SummaryService.MAX_RETRIES,
+            error: lastError.message
+          })
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        }
+      }
+    }
+    throw lastError || new Error('Summary generation failed after all retries')
+  }
 }
