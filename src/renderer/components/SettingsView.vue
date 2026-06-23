@@ -42,6 +42,7 @@
               v-if="availableModels.length > 0"
               class="form-select model-select"
               v-model="llmConfig.model"
+              @change="onModelChange"
             >
               <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
             </select>
@@ -49,8 +50,9 @@
               v-else
               type="text"
               class="form-input model-input"
-              placeholder="gpt-4"
+              placeholder="点击右侧按钮获取模型列表"
               v-model="llmConfig.model"
+              @blur="onModelChange"
             />
             <button
               class="btn-secondary"
@@ -60,15 +62,11 @@
               {{ isLoadingModels ? '获取中...' : '获取模型列表' }}
             </button>
           </div>
-          <div class="form-hint">点击"获取模型列表"自动填充，或手动输入模型名称</div>
+          <div class="form-hint">点击"获取模型列表"自动填充，或手动输入模型名称后失焦保存</div>
           <div v-if="modelError" class="form-error">{{ modelError }}</div>
+          <div v-if="statusMessage" class="form-hint">{{ statusMessage }}</div>
         </div>
-
-        <button class="btn-primary" :disabled="isSaving" @click="saveLLMConfig">保存 LLM 配置</button>
-        <div v-if="statusMessage" class="form-hint">{{ statusMessage }}</div>
       </div>
-
-      <!-- 阅读设置 -->
       <div class="settings-section">
         <h2 class="section-title">📖 阅读设置</h2>
 
@@ -226,7 +224,6 @@ onMounted(async () => {
 
 const saveLLMConfig = async () => {
   if (!window.electronAPI) {
-    alert('当前环境不支持保存设置')
     return
   }
 
@@ -238,13 +235,17 @@ const saveLLMConfig = async () => {
       apiKey: llmConfig.value.apiKey,
       model: llmConfig.value.model
     })
-    statusMessage.value = 'LLM 配置已保存'
+    statusMessage.value = '已保存'
   } catch (error) {
     console.error('Failed to save LLM config', error)
     statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
   } finally {
     isSaving.value = false
   }
+}
+
+const onModelChange = async () => {
+  await saveLLMConfig()
 }
 
 const fetchModels = async () => {
@@ -255,18 +256,25 @@ const fetchModels = async () => {
 
   isLoadingModels.value = true
   modelError.value = ''
+  statusMessage.value = ''
   try {
-    const models = await window.electronAPI.fetchLLMModels()
-    availableModels.value = models
-    // 清空当前模型，强制用户从列表中选择
-    llmConfig.value.model = models.length > 0 ? models[0] : ''
-    // 自动保存配置
+    // 先保存 baseUrl 和 apiKey
     await window.electronAPI.saveLLMConfig({
       baseUrl: llmConfig.value.baseUrl,
       apiKey: llmConfig.value.apiKey,
       model: llmConfig.value.model
     })
-    statusMessage.value = '模型列表已获取并保存'
+    // 获取模型列表
+    const models = await window.electronAPI.fetchLLMModels()
+    availableModels.value = models
+    // 选择第一个模型并保存
+    llmConfig.value.model = models.length > 0 ? models[0] : ''
+    await window.electronAPI.saveLLMConfig({
+      baseUrl: llmConfig.value.baseUrl,
+      apiKey: llmConfig.value.apiKey,
+      model: llmConfig.value.model
+    })
+    statusMessage.value = '已保存'
   } catch (error) {
     console.error('Failed to fetch models', error)
     modelError.value = `获取失败：${error instanceof Error ? error.message : String(error)}`
