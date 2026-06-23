@@ -13,16 +13,16 @@
         </div>
 
         <div class="reader-actions">
-          <button class="action-btn" @click="$emit('summarize')">
+          <button class="action-btn" @click.stop="$emit('summarize')">
             <FileText class="action-icon" />
             <span>AI &#25688;&#35201;</span>
           </button>
           <div class="translate-group">
-            <button class="action-btn" @click="$emit('translate', selectedLang)">
+            <button class="action-btn" @click.stop="$emit('translate', selectedLang)">
               <Languages class="action-icon" />
               <span>AI &#32763;&#35793;</span>
             </button>
-            <select class="lang-select" v-model="selectedLang">
+            <select class="lang-select" v-model="selectedLang" @click.stop>
               <option value="中文">中文</option>
               <option value="English">English</option>
               <option value="日本語">日本語</option>
@@ -32,15 +32,15 @@
               <option value="Español">Español</option>
             </select>
           </div>
-          <button class="action-btn" @click="$emit('add-tag')">
+          <button class="action-btn" @click.stop="$emit('add-tag')">
             <Tag class="action-icon" />
             <span>&#28155;&#21152;&#26631;&#31614;</span>
           </button>
-          <button class="action-btn" @click="$emit('mark-unread')">
+          <button class="action-btn" @click.stop="$emit('mark-unread')">
             <Circle class="action-icon" />
             <span>&#26631;&#35760;&#26410;&#35835;</span>
           </button>
-          <button class="action-btn" @click="$emit('export')">
+          <button class="action-btn" @click.stop="$emit('export')">
             <Download class="action-icon" />
             <span>&#23548;&#20986;</span>
           </button>
@@ -53,7 +53,7 @@
           <section v-if="article.summary || isSummarizing" class="ai-section">
             <div class="ai-section-header">
               <div class="ai-section-title">AI &#25688;&#35201;</div>
-              <button v-if="article.summary && !isSummarizing" class="regenerate-btn" @click="$emit('summarize')">
+              <button v-if="article.summary && !isSummarizing" class="regenerate-btn" @click.stop="$emit('summarize')">
                 &#128260; &#37325;&#26032;&#29983;&#25104;
               </button>
             </div>
@@ -75,7 +75,7 @@
           <section v-if="article.translation || isTranslating" class="ai-section">
             <div class="ai-section-header">
               <div class="ai-section-title">AI &#32763;&#35793;</div>
-              <button v-if="article.translation && !isTranslating" class="regenerate-btn" @click="$emit('translate')">
+              <button v-if="article.translation && !isTranslating" class="regenerate-btn" @click.stop="$emit('translate', selectedLang)">
                 &#128260; &#37325;&#26032;&#29983;&#25104;
               </button>
             </div>
