@@ -17,10 +17,21 @@
             <FileText class="action-icon" />
             <span>AI &#25688;&#35201;</span>
           </button>
-          <button class="action-btn" @click="$emit('translate')">
-            <Languages class="action-icon" />
-            <span>AI &#32763;&#35793;</span>
-          </button>
+          <div class="translate-group">
+            <button class="action-btn" @click="$emit('translate', selectedLang)">
+              <Languages class="action-icon" />
+              <span>AI &#32763;&#35793;</span>
+            </button>
+            <select class="lang-select" v-model="selectedLang">
+              <option value="中文">中文</option>
+              <option value="English">English</option>
+              <option value="日本語">日本語</option>
+              <option value="한국어">한국어</option>
+              <option value="Français">Français</option>
+              <option value="Deutsch">Deutsch</option>
+              <option value="Español">Español</option>
+            </select>
+          </div>
           <button class="action-btn" @click="$emit('add-tag')">
             <Tag class="action-icon" />
             <span>&#28155;&#21152;&#26631;&#31614;</span>
@@ -88,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { BookOpen, Circle, Download, FileText, Languages, Tag } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -109,11 +120,13 @@ const props = defineProps<{
 
 defineEmits<{
   summarize: []
-  translate: []
+  translate: [targetLang: string]
   'add-tag': []
   'mark-unread': []
   export: []
 }>()
+
+const selectedLang = ref('中文')
 
 const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()))
 </script>
@@ -206,6 +219,33 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
   width: 15px;
   height: 15px;
   flex-shrink: 0;
+}
+
+.translate-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lang-select {
+  min-height: 32px;
+  padding: 7px 8px;
+  border: 1px solid #dcdfe6;
+  background: #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #4b5563;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+}
+
+.lang-select:hover {
+  border-color: #409eff;
+  color: #2563eb;
+  background: #f8fbff;
 }
 
 .reader-content {

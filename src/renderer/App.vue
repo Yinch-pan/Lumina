@@ -683,14 +683,9 @@ const handleSummarize = async () => {
   }
 }
 
-const handleTranslate = async () => {
+const handleTranslate = async (targetLang: string = '中文') => {
   if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
     alert('请先选择一篇文章')
-    return
-  }
-
-  const targetLang = prompt('请输入目标语言', '中文')
-  if (!targetLang) {
     return
   }
 
