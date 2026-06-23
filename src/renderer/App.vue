@@ -26,6 +26,9 @@
       />
       <ReaderView
         :article="selectedArticle"
+        :isSummarizing="isSummarizing"
+        :isTranslating="isTranslating"
+        :aiProgress="aiProgress"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -74,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import TitleBar from './components/TitleBar.vue'
 import FeedSidebar from './components/FeedSidebar.vue'
 import ArticleList from './components/ArticleList.vue'
@@ -192,6 +195,11 @@ const opmlFilePath = ref('')
 const opmlPreviewFeeds = ref<OpmlFeed[]>([])
 const opmlImportProgress = ref<OpmlImportProgressItem[]>([])
 
+const isSummarizing = ref(false)
+const isTranslating = ref(false)
+const aiProgress = ref<{ type: string; attempt: number; maxAttempts: number; error?: string } | null>(null)
+let removeAIProgressListener: (() => void) | null = null
+
 const articles = computed(() => {
   let filteredArticles = articleList.value
 
@@ -218,6 +226,17 @@ onMounted(() => {
   void loadFeeds()
   void loadTags()
   void applyReadingSettings()
+
+  // 监听 AI 进度更新
+  if (window.electronAPI?.onAIProgress) {
+    removeAIProgressListener = window.electronAPI.onAIProgress((data) => {
+      aiProgress.value = data
+    })
+  }
+})
+
+onUnmounted(() => {
+  removeAIProgressListener?.()
 })
 
 const loadFeeds = async () => {
@@ -674,12 +693,17 @@ const handleSummarize = async () => {
     return
   }
 
+  isSummarizing.value = true
+  aiProgress.value = null
   try {
     const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value)
     selectedArticleContent.value = { ...selectedArticleContent.value, summary }
   } catch (error) {
     console.error('Failed to summarize article', error)
     alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
+  } finally {
+    isSummarizing.value = false
+    aiProgress.value = null
   }
 }
 
@@ -689,12 +713,17 @@ const handleTranslate = async (targetLang: string = '中文') => {
     return
   }
 
+  isTranslating.value = true
+  aiProgress.value = null
   try {
     const translation = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
     selectedArticleContent.value = { ...selectedArticleContent.value, translation }
   } catch (error) {
     console.error('Failed to translate article', error)
     alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
+  } finally {
+    isTranslating.value = false
+    aiProgress.value = null
   }
 }
 

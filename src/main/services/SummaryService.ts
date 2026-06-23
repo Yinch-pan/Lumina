@@ -12,7 +12,10 @@ export class SummaryService implements ISummaryService {
     private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
   ) {}
 
-  async summarize(articleId: string): Promise<string> {
+  async summarize(
+    articleId: string,
+    onProgress?: (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => void
+  ): Promise<string> {
     if (!articleId.trim()) {
       throw new Error('Article ID cannot be empty')
     }
@@ -32,6 +35,9 @@ export class SummaryService implements ISummaryService {
       const startedAt = Date.now()
       const runId = randomUUID()
       try {
+        if (attempt > 1) {
+          onProgress?.({ type: 'summary', attempt, maxAttempts: SummaryService.MAX_RETRIES })
+        }
         const config = await this.getConfig()
         const agent = new SummaryAgent(config)
         const response = await agent.summarizeWithUsage(markdown, { title: content.title })
@@ -72,7 +78,12 @@ export class SummaryService implements ISummaryService {
           completedAt: Date.now()
         })
         if (attempt < SummaryService.MAX_RETRIES) {
-          console.warn(`Summary attempt ${attempt} failed, retrying...`, lastError.message)
+          onProgress?.({
+            type: 'summary',
+            attempt,
+            maxAttempts: SummaryService.MAX_RETRIES,
+            error: lastError.message
+          })
           await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
         }
       }

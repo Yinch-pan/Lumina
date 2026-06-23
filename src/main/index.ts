@@ -183,12 +183,18 @@ function registerIpcHandlers() {
   ipcMain.handle('clean-article', async (_event, articleId: string) =>
     cloneForIpc(await getArticleService().getArticleContent(articleId))
   )
-  ipcMain.handle('summarize-article', async (_event, articleId: string) =>
-    cloneForIpc(await getSummaryService().summarize(articleId))
-  )
-  ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) =>
-    cloneForIpc(await getTranslationService().translate(articleId, targetLang))
-  )
+  ipcMain.handle('summarize-article', async (event, articleId: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    return cloneForIpc(await getSummaryService().summarize(articleId, onProgress))
+  })
+  ipcMain.handle('translate-article', async (event, articleId: string, targetLang: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    return cloneForIpc(await getTranslationService().translate(articleId, targetLang, onProgress))
+  })
 }
 
 function initializeServices() {

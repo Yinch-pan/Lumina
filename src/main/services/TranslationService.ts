@@ -12,7 +12,11 @@ export class TranslationService implements ITranslationService {
     private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
   ) {}
 
-  async translate(articleId: string, targetLang: string): Promise<string> {
+  async translate(
+    articleId: string,
+    targetLang: string,
+    onProgress?: (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => void
+  ): Promise<string> {
     if (!articleId.trim()) {
       throw new Error('Article ID cannot be empty')
     }
@@ -32,6 +36,9 @@ export class TranslationService implements ITranslationService {
       const startedAt = Date.now()
       const runId = randomUUID()
       try {
+        if (attempt > 1) {
+          onProgress?.({ type: 'translation', attempt, maxAttempts: TranslationService.MAX_RETRIES })
+        }
         const config = await this.getConfig()
         const agent = new TranslationAgent(config)
         const response = await agent.translateWithUsage(markdown, normalizedTargetLang, { title: content.title })
@@ -72,7 +79,12 @@ export class TranslationService implements ITranslationService {
           completedAt: Date.now()
         })
         if (attempt < TranslationService.MAX_RETRIES) {
-          console.warn(`Translation attempt ${attempt} failed, retrying...`, lastError.message)
+          onProgress?.({
+            type: 'translation',
+            attempt,
+            maxAttempts: TranslationService.MAX_RETRIES,
+            error: lastError.message
+          })
           await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
         }
       }

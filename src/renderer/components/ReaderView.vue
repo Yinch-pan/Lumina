@@ -59,7 +59,11 @@
             </div>
             <div v-if="isSummarizing" class="ai-loading">
               <div class="loading-spinner"></div>
-              <span>&#27491;&#22312;&#29983;&#25104;&#25688;&#35201;...</span>
+              <span v-if="aiProgress && aiProgress.type === 'summary'">
+                &#37325;&#35797;&#20013; ({{ aiProgress.attempt }}/{{ aiProgress.maxAttempts }})
+                <span v-if="aiProgress.error" class="retry-error">: {{ aiProgress.error }}</span>
+              </span>
+              <span v-else>&#27491;&#22312;&#29983;&#25104;&#25688;&#35201;...</span>
             </div>
             <div v-else class="ai-content">{{ article.summary }}</div>
           </section>
@@ -74,7 +78,11 @@
             </div>
             <div v-if="isTranslating" class="ai-loading">
               <div class="loading-spinner"></div>
-              <span>&#27491;&#22312;&#29983;&#25104;&#32763;&#35793;...</span>
+              <span v-if="aiProgress && aiProgress.type === 'translation'">
+                &#37325;&#35797;&#20013; ({{ aiProgress.attempt }}/{{ aiProgress.maxAttempts }})
+                <span v-if="aiProgress.error" class="retry-error">: {{ aiProgress.error }}</span>
+              </span>
+              <span v-else>&#27491;&#22312;&#29983;&#25104;&#32763;&#35793;...</span>
             </div>
             <div v-else class="ai-content">{{ article.translation }}</div>
           </section>
@@ -116,6 +124,7 @@ const props = defineProps<{
   } | null
   isSummarizing?: boolean
   isTranslating?: boolean
+  aiProgress?: { type: string; attempt: number; maxAttempts: number; error?: string } | null
 }>()
 
 defineEmits<{
@@ -290,6 +299,11 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
   padding: 16px 0;
   color: #6b7280;
   font-size: 14px;
+}
+
+.retry-error {
+  color: #f56c6c;
+  font-size: 12px;
 }
 
 .loading-spinner {
