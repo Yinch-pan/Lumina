@@ -199,7 +199,7 @@ const opmlImportProgress = ref<OpmlImportProgressItem[]>([])
 const isSummarizing = ref(false)
 const isTranslating = ref(false)
 const aiProgress = ref<{ type: string; attempt: number; maxAttempts: number; error?: string } | null>(null)
-const streamingContent = ref<{ type: string; content: string } | null>(null)
+const streamingContent = ref<{ type: string; content: string; articleId: string } | null>(null)
 let removeAIProgressListener: (() => void) | null = null
 let removeAIChunkListener: (() => void) | null = null
 
@@ -240,10 +240,12 @@ onMounted(() => {
   // 监听 AI 流式内容
   if (window.electronAPI?.onAIChunk) {
     removeAIChunkListener = window.electronAPI.onAIChunk((data) => {
+      // 只处理当前文章的 chunk
+      if (streamingContent.value?.articleId !== selectedArticleId.value) {
+        return
+      }
       if (streamingContent.value?.type === data.type) {
         streamingContent.value.content += data.chunk
-      } else {
-        streamingContent.value = { type: data.type, content: data.chunk }
       }
     })
   }
@@ -722,19 +724,26 @@ const handleSummarize = async () => {
     return
   }
 
+  const articleId = selectedArticleId.value
   isSummarizing.value = true
   aiProgress.value = null
-  streamingContent.value = { type: 'summary', content: '' }
+  streamingContent.value = { type: 'summary', content: '', articleId }
   try {
-    const summary = await window.electronAPI.summarizeArticleStream(selectedArticleId.value)
-    selectedArticleContent.value = { ...selectedArticleContent.value, summary }
+    const summary = await window.electronAPI.summarizeArticleStream(articleId)
+    if (selectedArticleId.value === articleId) {
+      selectedArticleContent.value = { ...selectedArticleContent.value, summary }
+    }
   } catch (error) {
     console.error('Failed to summarize article', error)
-    alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
+    if (selectedArticleId.value === articleId) {
+      alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
+    }
   } finally {
-    isSummarizing.value = false
-    aiProgress.value = null
-    streamingContent.value = null
+    if (selectedArticleId.value === articleId) {
+      isSummarizing.value = false
+      aiProgress.value = null
+      streamingContent.value = null
+    }
   }
 }
 
@@ -744,19 +753,26 @@ const handleTranslate = async (targetLang: string = '中文') => {
     return
   }
 
+  const articleId = selectedArticleId.value
   isTranslating.value = true
   aiProgress.value = null
-  streamingContent.value = { type: 'translation', content: '' }
+  streamingContent.value = { type: 'translation', content: '', articleId }
   try {
-    const translation = await window.electronAPI.translateArticleStream(selectedArticleId.value, targetLang)
-    selectedArticleContent.value = { ...selectedArticleContent.value, translation }
+    const translation = await window.electronAPI.translateArticleStream(articleId, targetLang)
+    if (selectedArticleId.value === articleId) {
+      selectedArticleContent.value = { ...selectedArticleContent.value, translation }
+    }
   } catch (error) {
     console.error('Failed to translate article', error)
-    alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
+    if (selectedArticleId.value === articleId) {
+      alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
+    }
   } finally {
-    isTranslating.value = false
-    aiProgress.value = null
-    streamingContent.value = null
+    if (selectedArticleId.value === articleId) {
+      isTranslating.value = false
+      aiProgress.value = null
+      streamingContent.value = null
+    }
   }
 }
 
