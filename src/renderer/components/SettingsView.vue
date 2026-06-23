@@ -260,6 +260,13 @@ const fetchModels = async () => {
     availableModels.value = models
     // 清空当前模型，强制用户从列表中选择
     llmConfig.value.model = models.length > 0 ? models[0] : ''
+    // 自动保存配置
+    await window.electronAPI.saveLLMConfig({
+      baseUrl: llmConfig.value.baseUrl,
+      apiKey: llmConfig.value.apiKey,
+      model: llmConfig.value.model
+    })
+    statusMessage.value = '模型列表已获取并保存'
   } catch (error) {
     console.error('Failed to fetch models', error)
     modelError.value = `获取失败：${error instanceof Error ? error.message : String(error)}`
