@@ -1,4 +1,5 @@
 import { Repository } from '../database/repository'
+import { OpenAICompatibleProvider } from '../llm/provider'
 import { LLMConfig } from '../types'
 import { ISettingsService } from './interfaces'
 
@@ -49,5 +50,16 @@ export class SettingsService implements ISettingsService {
     byModel: Array<{ model: string; calls: number; tokens: number }>
   }> {
     return this.repository.getLLMUsageStats()
+  }
+
+  async fetchModels(): Promise<string[]> {
+    const config = await this.getLLMConfig()
+    if (!config.apiKey) {
+      throw new Error('请先填写 API Key')
+    }
+    return OpenAICompatibleProvider.listModels({
+      baseUrl: config.baseUrl,
+      apiKey: config.apiKey,
+    })
   }
 }

@@ -143,6 +143,35 @@ export class OpenAICompatibleProvider implements LLMProvider {
   }
 
   /**
+   * 获取可用模型列表
+   * 调用 GET /models 端点，返回模型 ID 列表
+   * 支持所有 OpenAI 兼容 API（OpenAI、DeepSeek、ECNU 等）
+   */
+  static async listModels(config: Pick<LLMProviderConfig, 'baseUrl' | 'apiKey'>): Promise<string[]> {
+    try {
+      const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.baseUrl,
+        timeout: 30_000,
+      })
+
+      const response = await client.models.list()
+      return response.data
+        .map((model) => model.id)
+        .sort()
+    } catch (error) {
+      if (error instanceof OpenAI.APIError) {
+        const status = error.status
+        if (status === 401 || status === 403) {
+          throw new Error(`认证失败 (${status})：API Key 无效或权限不足`)
+        }
+        throw new Error(`获取模型列表失败 (${status})：${error.message}`)
+      }
+      throw new Error(`获取模型列表失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  /**
    * 统一错误处理：将 OpenAI SDK 错误转换为有意义的 Error
    */
   private handleError(error: unknown): Error {

@@ -37,13 +37,31 @@
 
         <div class="form-group">
         <label class="form-label">Model</label>
-          <input
-        type="text"
-            class="form-input"
-            placeholder="gpt-4"
-            v-model="llmConfig.model"
-        />
-        <div class="form-hint">例如：gpt-4, gpt-3.5-turbo, claude-3-opus</div>
+          <div class="model-input-row">
+            <select
+              v-if="availableModels.length > 0"
+              class="form-select model-select"
+              v-model="llmConfig.model"
+            >
+              <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
+            </select>
+            <input
+              v-else
+              type="text"
+              class="form-input model-input"
+              placeholder="gpt-4"
+              v-model="llmConfig.model"
+            />
+            <button
+              class="btn-secondary"
+              :disabled="isLoadingModels"
+              @click="fetchModels"
+            >
+              {{ isLoadingModels ? '获取中...' : '获取模型列表' }}
+            </button>
+          </div>
+          <div class="form-hint">点击"获取模型列表"自动填充，或手动输入模型名称</div>
+          <div v-if="modelError" class="form-error">{{ modelError }}</div>
         </div>
 
         <button class="btn-primary" :disabled="isSaving" @click="saveLLMConfig">保存 LLM 配置</button>
@@ -163,6 +181,9 @@ const readingSettings = ref({
 
 const isSaving = ref(false)
 const statusMessage = ref('')
+const isLoadingModels = ref(false)
+const modelError = ref('')
+const availableModels = ref<string[]>([])
 
 const usageStats = ref({
   totalCalls: 0,
@@ -223,6 +244,28 @@ const saveLLMConfig = async () => {
     statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
   } finally {
     isSaving.value = false
+  }
+}
+
+const fetchModels = async () => {
+  if (!window.electronAPI) {
+    modelError.value = '当前环境不支持获取模型列表'
+    return
+  }
+
+  isLoadingModels.value = true
+  modelError.value = ''
+  try {
+    const models = await window.electronAPI.fetchLLMModels()
+    availableModels.value = models
+    if (models.length > 0 && !models.includes(llmConfig.value.model)) {
+      llmConfig.value.model = models[0]
+    }
+  } catch (error) {
+    console.error('Failed to fetch models', error)
+    modelError.value = `获取失败：${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isLoadingModels.value = false
   }
 }
 
@@ -357,6 +400,47 @@ const saveReadingSettings = async () => {
   font-size: 12px;
   color: #909399;
   margin-top: 6px;
+}
+
+.form-error {
+  font-size: 12px;
+  color: #f56c6c;
+  margin-top: 6px;
+}
+
+.model-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-select,
+.model-input {
+  flex: 1;
+}
+
+.btn-secondary {
+  padding: 10px 16px;
+  background: #ffffff;
+  color: #409eff;
+  border: 1px solid #409eff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover {
+  background: #ecf5ff;
+}
+
+.btn-secondary:disabled {
+  color: #c0c4cc;
+  border-color: #e4e7ed;
+  cursor: not-allowed;
+  background: #ffffff;
 }
 
 .btn-primary {
