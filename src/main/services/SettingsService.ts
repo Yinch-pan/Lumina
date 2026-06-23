@@ -62,4 +62,18 @@ export class SettingsService implements ISettingsService {
       apiKey: config.apiKey,
     })
   }
+
+  async getAgentRunHistory(limit: number = 50): Promise<Array<{
+    id: string
+    entryId: string
+    entryTitle: string
+    agentType: string
+    status: string
+    errorMessage: string | null
+    startedAt: number
+    completedAt: number | null
+    duration: number | null
+  }>> {
+    return this.repository.getAgentRunHistory(limit)
+  }
 }

@@ -135,6 +135,34 @@
         </div>
       </div>
 
+      <!-- 任务历史 -->
+      <div class="settings-section">
+        <h2 class="section-title">📜 任务历史</h2>
+        <div class="section-description">
+          最近的 AI 任务执行记录
+        </div>
+
+        <div v-if="agentRunHistory.length === 0" class="empty-history">
+          暂无任务记录
+        </div>
+        <div v-else class="history-list">
+          <div v-for="run in agentRunHistory" :key="run.id" class="history-item" :class="run.status">
+            <div class="history-header">
+              <span class="history-type">{{ run.agentType === 'summary' ? '摘要' : '翻译' }}</span>
+              <span class="history-status" :class="run.status">
+                {{ run.status === 'completed' ? '成功' : '失败' }}
+              </span>
+            </div>
+            <div class="history-title">{{ run.entryTitle }}</div>
+            <div class="history-meta">
+              <span class="history-time">{{ formatTime(run.startedAt) }}</span>
+              <span v-if="run.duration" class="history-duration">{{ formatDuration(run.duration) }}</span>
+            </div>
+            <div v-if="run.errorMessage" class="history-error">{{ run.errorMessage }}</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 应用信息 -->
       <div class="settings-section">
       <h2 class="section-title">ℹ️ 关于 Mercury</h2>
@@ -191,6 +219,18 @@ const usageStats = ref({
   byModel: [] as Array<{ model: string; calls: number; tokens: number }>
 })
 
+const agentRunHistory = ref<Array<{
+  id: string
+  entryId: string
+  entryTitle: string
+  agentType: string
+  status: string
+  errorMessage: string | null
+  startedAt: number
+  completedAt: number | null
+  duration: number | null
+}>>([])
+
 onMounted(async () => {
   if (!window.electronAPI) {
     return
@@ -217,6 +257,10 @@ onMounted(async () => {
     // 加载 LLM 用量统计
     const stats = await window.electronAPI.getLLMUsageStats()
     usageStats.value = stats
+
+    // 加载任务历史
+    const history = await window.electronAPI.getAgentRunHistory(20)
+    agentRunHistory.value = history
   } catch (error) {
     console.error('Failed to load settings', error)
   }
@@ -303,6 +347,30 @@ const saveReadingSettings = async () => {
   } finally {
     isSaving.value = false
   }
+}
+
+const formatTime = (timestamp: number) => {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`
+
+  return date.toLocaleDateString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric'
+  })
+}
+
+const formatDuration = (ms: number) => {
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 </script>
 
@@ -566,5 +634,86 @@ const saveReadingSettings = async () => {
 .model-stats-text {
   font-size: 14px;
   color: #606266;
+}
+
+.empty-history {
+  text-align: center;
+  color: #909399;
+  padding: 24px;
+  font-size: 14px;
+}
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 12px;
+  border-bottom: 1px solid #e4e7ed;
+  background: var(--card-bg);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.history-item:last-child {
+  margin-bottom: 0;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.history-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.history-status {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.history-status.completed {
+  color: #67c23a;
+  background: #f0f9eb;
+}
+
+.history-status.failed {
+  color: #f56c6c;
+  background: #fef0f0;
+}
+
+.history-title {
+  font-size: 14px;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.history-error {
+  font-size: 12px;
+  color: #f56c6c;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #fef0f0;
+  border-radius: 2px;
 }
 </style>

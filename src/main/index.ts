@@ -178,6 +178,9 @@ function registerIpcHandlers() {
   )
   ipcMain.handle('get-llm-usage-stats', async () => cloneForIpc(await getSettingsService().getLLMUsageStats()))
   ipcMain.handle('fetch-llm-models', async () => cloneForIpc(await getSettingsService().fetchModels()))
+  ipcMain.handle('get-agent-run-history', async (_event, limit?: number) =>
+    cloneForIpc(await getSettingsService().getAgentRunHistory(limit))
+  )
 
   // 模块 C: AI 功能
   ipcMain.handle('clean-article', async (_event, articleId: string) =>

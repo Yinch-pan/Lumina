@@ -657,6 +657,57 @@ export class Repository {
       byModel
     }
   }
+
+  getAgentRunHistory(limit: number = 50): Array<{
+    id: string
+    entryId: string
+    entryTitle: string
+    agentType: string
+    status: string
+    errorMessage: string | null
+    startedAt: number
+    completedAt: number | null
+    duration: number | null
+  }> {
+    const rows = this.db
+      .prepare(
+        `SELECT 
+          ar.id,
+          ar.entry_id,
+          e.title as entry_title,
+          ar.agent_type,
+          ar.status,
+          ar.error_message,
+          ar.started_at,
+          ar.completed_at
+        FROM agent_runs ar
+        LEFT JOIN entries e ON e.id = ar.entry_id
+        ORDER BY ar.started_at DESC
+        LIMIT ?`
+      )
+      .all(limit) as Array<{
+        id: string
+        entry_id: string
+        entry_title: string | null
+        agent_type: string
+        status: string
+        error_message: string | null
+        started_at: number
+        completed_at: number | null
+      }>
+
+    return rows.map(row => ({
+      id: row.id,
+      entryId: row.entry_id,
+      entryTitle: row.entry_title || 'Unknown',
+      agentType: row.agent_type,
+      status: row.status,
+      errorMessage: row.error_message,
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
+      duration: row.completed_at ? row.completed_at - row.started_at : null
+    }))
+  }
 }
 
 function normalizeNullableTitle(value?: string | null): string | null {

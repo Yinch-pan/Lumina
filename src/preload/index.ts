@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveSetting: (key: string, value: string) => ipcRenderer.invoke('save-setting', key, value),
   getLLMUsageStats: () => ipcRenderer.invoke('get-llm-usage-stats'),
   fetchLLMModels: () => ipcRenderer.invoke('fetch-llm-models'),
+  getAgentRunHistory: (limit?: number) => ipcRenderer.invoke('get-agent-run-history', limit),
   onAIProgress: (callback: (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => void) => {
     const handler = (_event: any, data: any) => callback(data)
     ipcRenderer.on('ai-progress', handler)
