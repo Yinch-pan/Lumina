@@ -71,6 +71,8 @@
             <button class="rp-btn" :class="{ active: readingWidth === 960 }" @click="setWidth(960)">宽</button>
           </div>
         </div>
+
+        <div class="reading-progress" :style="{ width: (scrollProgress * 100) + '%' }"></div>
       </header>
 
       <main v-if="readerMode === 'clean'" ref="contentRef" class="reader-content" @scroll="onScroll">
@@ -166,6 +168,10 @@
           :src="webUrl"
         ></webview>
       </section>
+
+      <button v-if="showBackTop" class="back-top-btn" @click="scrollToTop" title="返回顶部">
+        <ArrowUp :size="18" />
+      </button>
     </div>
 
     <div v-else class="empty-state">
@@ -178,6 +184,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import {
+  ArrowUp,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -440,18 +447,26 @@ const applyHighlightWithNote = () => {
 const contentRef = ref<HTMLElement | null>(null)
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
+const scrollProgress = ref(0)
+const showBackTop = ref(false)
+
+const scrollToTop = () => {
+  contentRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 const onScroll = () => {
   toolbar.value.visible = false
   readingPanelOpen.value = false
   const el = contentRef.value
   if (!el) return
-  // 在调度时捕获当前文章 id，避免防抖回调在切换文章后把旧位置存到新文章
+  const max = el.scrollHeight - el.clientHeight
+  const percent = max > 0 ? el.scrollTop / max : 0
+  scrollProgress.value = percent
+  showBackTop.value = el.scrollTop > 600
   const articleId = props.article?.id
   if (!articleId) return
   if (scrollTimer) clearTimeout(scrollTimer)
   scrollTimer = setTimeout(() => {
-    const max = el.scrollHeight - el.clientHeight
-    const percent = max > 0 ? el.scrollTop / max : 0
     emit('scroll', articleId, percent)
   }, 500)
 }
@@ -469,6 +484,8 @@ watch(
     toolbar.value.visible = false
     readingPanelOpen.value = false
     pendingSelection = null
+    scrollProgress.value = 0
+    showBackTop.value = false
     window.getSelection()?.removeAllRanges()
     await nextTick()
     const el = contentRef.value
@@ -496,6 +513,7 @@ watch(
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  position: relative;
 }
 
 .reader-header {
@@ -994,4 +1012,31 @@ watch(
 .rp-btn:hover { border-color: #409eff; color: #409eff; }
 .rp-btn.active { background: #409eff; color: #fff; border-color: #409eff; }
 .rp-val { min-width: 40px; text-align: center; font-size: 13px; color: var(--text-color); }
+
+.reading-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: #409eff;
+  transition: width 0.1s linear;
+}
+.back-top-btn {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  z-index: 30;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.back-top-btn:hover { border-color: #409eff; color: #409eff; }
 </style>
