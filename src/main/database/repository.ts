@@ -82,6 +82,7 @@ interface EntryContentRow {
   published_at: number | null
   url: string
   is_starred: number
+  scroll_percent?: number
 }
 
 interface TagRow {
@@ -345,7 +346,8 @@ export class Repository {
                 entries.author,
                 entries.published_at,
                 entries.url,
-                entries.is_starred
+                entries.is_starred,
+                entries.scroll_percent
          FROM entries
          LEFT JOIN entry_contents ON entry_contents.entry_id = entries.id
          WHERE entries.id = ?`
@@ -368,6 +370,7 @@ export class Repository {
       summary: this.getLatestAgentOutput(entryId, 'summary') ?? '',
       translation: this.getLatestAgentOutput(entryId, 'translation') ?? '',
       isStarred: row.is_starred === 1,
+      scrollPercent: Number(row.scroll_percent ?? 0),
       tags: this.getArticleTags(entryId).map((tag) => tag.name)
     }
   }
@@ -400,6 +403,10 @@ export class Repository {
 
   setStarred(entryId: string, starred: boolean): void {
     this.db.prepare('UPDATE entries SET is_starred = ? WHERE id = ?').run(starred ? 1 : 0, entryId)
+  }
+
+  saveScrollPercent(entryId: string, percent: number): void {
+    this.db.prepare('UPDATE entries SET scroll_percent = ? WHERE id = ?').run(percent, entryId)
   }
 
   getStarredArticles(): Article[] {

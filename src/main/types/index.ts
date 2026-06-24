@@ -54,6 +54,7 @@ export interface ArticleContent {
   summary?: string
   translation?: string
   isStarred?: boolean
+  scrollPercent?: number
   tags: string[]
 }
 

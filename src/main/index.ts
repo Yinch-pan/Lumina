@@ -133,6 +133,9 @@ function registerIpcHandlers() {
   ipcMain.handle('set-article-starred', async (_event, articleId: string, starred: boolean) =>
     getArticleService().setStarred(articleId, starred)
   )
+  ipcMain.handle('save-scroll-percent', async (_event, articleId: string, percent: number) =>
+    getArticleService().saveScrollPercent(articleId, percent)
+  )
   ipcMain.handle('get-starred-articles', async () =>
     cloneForIpc(getArticleService().getStarredArticles())
   )

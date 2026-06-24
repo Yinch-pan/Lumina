@@ -85,6 +85,9 @@ export interface IArticleService {
   // 设置文章收藏/星标状态
   setStarred(articleId: string, starred: boolean): void
 
+  // 保存文章阅读滚动位置
+  saveScrollPercent(articleId: string, percent: number): void
+
   // 获取所有收藏文章
   getStarredArticles(): Article[]
 }

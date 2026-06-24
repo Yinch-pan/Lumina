@@ -29,6 +29,7 @@ declare global {
       markArticleRead: (articleId: string) => Promise<void>
       markArticleUnread: (articleId: string) => Promise<void>
       setArticleStarred: (articleId: string, starred: boolean) => Promise<void>
+      saveScrollPercent: (articleId: string, percent: number) => Promise<void>
       getStarredArticles: () => Promise<Article[]>
       searchArticles: (query: string) => Promise<Article[]>
 

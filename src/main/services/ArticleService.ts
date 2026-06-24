@@ -104,6 +104,10 @@ export class ArticleService implements IArticleService {
     this.repository.setStarred(articleId, starred)
   }
 
+  saveScrollPercent(articleId: string, percent: number): void {
+    this.repository.saveScrollPercent(articleId, percent)
+  }
+
   getStarredArticles(): Article[] {
     return this.repository.getStarredArticles()
   }

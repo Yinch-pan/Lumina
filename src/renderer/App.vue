@@ -37,6 +37,7 @@
         @mark-unread="handleMarkUnread"
         @toggle-star="handleReaderToggleStar"
         @export="handleExport"
+        @scroll="handleSaveScroll"
       />
     </div>
 
@@ -821,6 +822,14 @@ const handleToggleStar = async (articleId: string) => {
 const handleReaderToggleStar = async () => {
   if (!selectedArticleId.value) return
   await handleToggleStar(selectedArticleId.value)
+}
+
+const handleSaveScroll = (percent: number) => {
+  if (!window.electronAPI || !selectedArticleId.value) return
+  const articleId = selectedArticleId.value
+  window.electronAPI
+    .saveScrollPercent(articleId, percent)
+    .catch((e) => console.error('Failed to save scroll', e))
 }
 
 const handleSelectStarred = async () => {

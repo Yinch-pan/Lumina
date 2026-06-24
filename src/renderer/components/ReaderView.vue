@@ -48,7 +48,7 @@
         </div>
       </header>
 
-      <main class="reader-content">
+      <main ref="contentRef" class="reader-content" @scroll="onScroll">
         <div class="content-section">
           <section v-if="article.summary" class="ai-section">
             <div class="ai-section-title">AI &#25688;&#35201;</div>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { BookOpen, Circle, Download, FileText, Languages, Star, Tag } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -101,6 +101,7 @@ const props = defineProps<{
     summary?: string
     translation?: string
     isStarred?: boolean
+    scrollPercent?: number
     tags: string[]
   } | null
   translationSegments?: Array<{
@@ -111,16 +112,44 @@ const props = defineProps<{
   }>
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   summarize: [length: 'short' | 'medium' | 'long']
   translate: []
   'add-tag': []
   'mark-unread': []
   'toggle-star': []
   export: []
+  scroll: [percent: number]
 }>()
 
 const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()))
+
+const contentRef = ref<HTMLElement | null>(null)
+let scrollTimer: ReturnType<typeof setTimeout> | null = null
+
+const onScroll = () => {
+  const el = contentRef.value
+  if (!el) return
+  if (scrollTimer) clearTimeout(scrollTimer)
+  scrollTimer = setTimeout(() => {
+    const max = el.scrollHeight - el.clientHeight
+    const percent = max > 0 ? el.scrollTop / max : 0
+    emit('scroll', percent)
+  }, 500)
+}
+
+// 文章切换后恢复滚动位置
+watch(
+  () => props.article?.id,
+  async () => {
+    await nextTick()
+    const el = contentRef.value
+    if (!el || !props.article) return
+    const percent = props.article.scrollPercent ?? 0
+    const max = el.scrollHeight - el.clientHeight
+    el.scrollTop = max > 0 ? percent * max : 0
+  }
+)
 </script>
 
 <style scoped>

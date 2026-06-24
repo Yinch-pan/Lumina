@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   markArticleUnread: (articleId: string) => ipcRenderer.invoke('mark-article-unread', articleId),
   setArticleStarred: (articleId: string, starred: boolean) =>
     ipcRenderer.invoke('set-article-starred', articleId, starred),
+  saveScrollPercent: (articleId: string, percent: number) =>
+    ipcRenderer.invoke('save-scroll-percent', articleId, percent),
   getStarredArticles: () => ipcRenderer.invoke('get-starred-articles'),
   searchArticles: (query: string) => ipcRenderer.invoke('search-articles', query),
 
