@@ -398,6 +398,10 @@ const openInlineWeb = async (url: string) => {
   currentUrl.value = url
   canGoBack.value = false
   canGoForward.value = false
+  // 进入网页模式前复位 clean 模式专属的浮层状态，避免返回顶部按钮/灯箱泄漏到 web 视图
+  showBackTop.value = false
+  scrollProgress.value = 0
+  lightboxSrc.value = null
   readerMode.value = 'web'
   await nextTick()
   attachWebviewListeners()
@@ -1136,19 +1140,6 @@ watch(
 .back-top-btn:hover { border-color: #409eff; color: #409eff; }
 
 .article-content :deep(pre) { position: relative; }
-.code-copy-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 12px;
-  padding: 2px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.12);
-  color: #f9fafb;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.code-copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
 </style>
 
 <style>
@@ -1169,4 +1160,17 @@ watch(
   border-radius: 4px;
   cursor: default;
 }
+.code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  color: #f9fafb;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.code-copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
 </style>

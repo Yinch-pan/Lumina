@@ -778,9 +778,12 @@ const handleSummarize = async (length: 'short' | 'medium' | 'long' = 'medium') =
   }
 
   try {
+    const requestArticleId = selectedArticleId.value
     selectedArticleContent.value = { ...selectedArticleContent.value, summary: '' }
     summaryStreaming.value = true
-    const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value, length)
+    const summary = await window.electronAPI.summarizeArticle(requestArticleId, length)
+    // 若摘要进行中用户已切走，丢弃迟到的结果，避免把 A 的摘要写进 B
+    if (selectedArticleId.value !== requestArticleId || !selectedArticleContent.value) return
     selectedArticleContent.value = { ...selectedArticleContent.value, summary }
   } catch (error) {
     console.error('Failed to summarize article', error)
