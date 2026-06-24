@@ -10,6 +10,7 @@ import { SettingsService } from './services/SettingsService'
 import { SummaryService } from './services/SummaryService'
 import { TagService } from './services/TagService'
 import { TranslationService } from './services/TranslationService'
+import { encryptSecret, isEncrypted } from './security/secureStore'
 import { LLMConfig, OpmlFeed } from './types'
 
 let mainWindow: BrowserWindow | null = null
@@ -201,9 +202,17 @@ function initializeServices() {
   tagService = new TagService(repository)
   exportService = new ExportService(repository, articleService)
   settingsService = new SettingsService(repository)
+  migratePlaintextApiKey(repository)
   summaryService = new SummaryService(repository, () => getSettingsService().getLLMConfig())
   translationService = new TranslationService(repository, () => getSettingsService().getLLMConfig())
   startAutoRefreshScheduler()
+}
+
+function migratePlaintextApiKey(repository: Repository): void {
+  const stored = repository.getSetting('llm.apiKey')
+  if (stored && !isEncrypted(stored)) {
+    repository.setSetting('llm.apiKey', encryptSecret(stored))
+  }
 }
 
 function getFeedService(): FeedService {

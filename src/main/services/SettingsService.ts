@@ -1,5 +1,6 @@
 import { Repository } from '../database/repository'
 import { LLMConfig } from '../types'
+import { encryptSecret, decryptSecret } from '../security/secureStore'
 import { ISettingsService } from './interfaces'
 
 /**
@@ -11,7 +12,7 @@ export class SettingsService implements ISettingsService {
 
   async getLLMConfig(): Promise<LLMConfig> {
     const baseUrl = this.repository.getSetting('llm.baseUrl') ?? 'https://api.openai.com/v1'
-    const apiKey = this.repository.getSetting('llm.apiKey') ?? ''
+    const apiKey = decryptSecret(this.repository.getSetting('llm.apiKey') ?? '')
     const model = this.repository.getSetting('llm.model') ?? 'gpt-3.5-turbo'
 
     return {
@@ -26,7 +27,7 @@ export class SettingsService implements ISettingsService {
       this.repository.setSetting('llm.baseUrl', config.baseUrl)
     }
     if (config.apiKey !== undefined) {
-   this.repository.setSetting('llm.apiKey', config.apiKey)
+      this.repository.setSetting('llm.apiKey', encryptSecret(config.apiKey))
     }
     if (config.model !== undefined) {
       this.repository.setSetting('llm.model', config.model)
