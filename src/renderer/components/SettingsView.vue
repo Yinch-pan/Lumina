@@ -397,6 +397,6 @@ const saveReadingSettings = async () => {
 
 .usage-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
 .usage-table th, .usage-table td { border: 1px solid var(--border-color, #e4e7ed); padding: 6px 10px; text-align: left; }
-.usage-table thead th { background: #f5f7fa; font-weight: 600; }
-.usage-table tfoot td { font-weight: 600; background: #fafafa; }
+.usage-table thead th { background: var(--hover-bg, #f5f7fa); font-weight: 600; }
+.usage-table tfoot td { font-weight: 600; background: var(--hover-bg, #fafafa); }
 </style>
