@@ -162,7 +162,17 @@ export class Repository {
   }
 
   deleteFeed(feedId: string): void {
-    this.db.prepare('DELETE FROM feeds WHERE id = ?').run(feedId)
+    // 先清理该源下文章的 FTS 索引行（entries_fts 是独立虚表，不随外键级联删除），
+    // 必须在 DELETE FROM feeds 触发级联删 entries 之前取到 rowid。
+    const rows = this.db
+      .prepare('SELECT rowid FROM entries WHERE feed_id = ?')
+      .all(feedId) as Array<{ rowid: number }>
+    const deleteFts = this.db.prepare('DELETE FROM entries_fts WHERE rowid = ?')
+    const tx = this.db.transaction(() => {
+      for (const row of rows) deleteFts.run(row.rowid)
+      this.db.prepare('DELETE FROM feeds WHERE id = ?').run(feedId)
+    })
+    tx()
   }
 
   getFeedRowById(feedId: string): FeedRow | undefined {

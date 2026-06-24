@@ -39,6 +39,12 @@ function main() {
   assert.deepEqual(repo.searchArticles('!!!'), [])
   assert.deepEqual(repo.searchArticles('---'), [])
 
+  // 删除订阅源后，其文章的 FTS 索引行应一并清理(不留孤儿)
+  assert.equal(repo.searchArticles('generics').length, 1)
+  repo.deleteFeed('f1')
+  assert.deepEqual(repo.searchArticles('generics'), [])
+  assert.deepEqual(repo.searchArticles('lifetime'), [])
+
   db.close()
   fs.rmSync(tempDir, { recursive: true, force: true })
 }
