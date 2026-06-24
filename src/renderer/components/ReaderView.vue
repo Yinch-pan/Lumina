@@ -284,6 +284,9 @@ const allHighlights = computed(() => props.highlights ?? [])
 const lightboxSrc = ref<string | null>(null)
 
 const onArticleClick = (e: MouseEvent) => {
+  // 若存在非空文本选区(如划词跨越图片),不打开灯箱，避免与高亮工具栏同时触发
+  const sel = window.getSelection()
+  if (sel && !sel.isCollapsed && sel.toString().trim()) return
   const target = e.target as HTMLElement
   if (target.tagName === 'IMG') {
     const src = (target as HTMLImageElement).src
