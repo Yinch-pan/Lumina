@@ -589,6 +589,34 @@ export class Repository {
     return rows.map((row) => this.toArticle(row))
   }
 
+  // ==================== 划词高亮 =================
+
+  addHighlight(h: { id: string; entryId: string; selectedText: string; prefixText?: string | null; suffixText?: string | null; color: string; note?: string | null; createdAt: number }): void {
+    this.db.prepare(`INSERT INTO highlights (id, entry_id, selected_text, prefix_text, suffix_text, color, note, created_at)
+      VALUES (@id, @entryId, @selectedText, @prefixText, @suffixText, @color, @note, @createdAt)`)
+      .run({ ...h, prefixText: h.prefixText ?? null, suffixText: h.suffixText ?? null, note: h.note ?? null })
+  }
+
+  getHighlights(entryId: string): Array<{ id: string; entryId: string; selectedText: string; prefixText: string | null; suffixText: string | null; color: string; note: string | null; createdAt: number }> {
+    const rows = this.db.prepare('SELECT * FROM highlights WHERE entry_id = ? ORDER BY created_at').all(entryId) as Array<Record<string, unknown>>
+    return rows.map((r) => ({
+      id: String(r.id), entryId: String(r.entry_id), selectedText: String(r.selected_text),
+      prefixText: (r.prefix_text as string) ?? null, suffixText: (r.suffix_text as string) ?? null,
+      color: String(r.color), note: (r.note as string) ?? null, createdAt: Number(r.created_at)
+    }))
+  }
+
+  updateHighlight(id: string, fields: { color?: string; note?: string }): void {
+    const cur = this.db.prepare('SELECT color, note FROM highlights WHERE id = ?').get(id) as { color: string; note: string | null } | undefined
+    if (!cur) return
+    this.db.prepare('UPDATE highlights SET color = ?, note = ? WHERE id = ?')
+      .run(fields.color ?? cur.color, fields.note !== undefined ? fields.note : cur.note, id)
+  }
+
+  deleteHighlight(id: string): void {
+    this.db.prepare('DELETE FROM highlights WHERE id = ?').run(id)
+  }
+
   // ============ 设置管理 ================
 
   getSetting(key: string): string | null {

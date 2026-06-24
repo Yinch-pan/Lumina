@@ -70,6 +70,12 @@ declare global {
       getSetting: (key: string) => Promise<string | null>
       saveSetting: (key: string, value: string) => Promise<void>
       getUsageStats: () => Promise<Array<{ model: string; agentType: string; day: string; requests: number; totalTokens: number }>>
+
+      // 模块: 划词高亮与笔记
+      addHighlight: (input: { entryId: string; selectedText: string; prefixText?: string; suffixText?: string; color: string; note?: string }) => Promise<{ id: string; entryId: string; selectedText: string; prefixText: string | null; suffixText: string | null; color: string; note: string | null; createdAt: number }>
+      getHighlights: (entryId: string) => Promise<Array<{ id: string; entryId: string; selectedText: string; prefixText: string | null; suffixText: string | null; color: string; note: string | null; createdAt: number }>>
+      updateHighlight: (id: string, fields: { color?: string; note?: string }) => Promise<void>
+      deleteHighlight: (id: string) => Promise<void>
     }
   }
 }

@@ -95,5 +95,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-llm-config', config),
   getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
   saveSetting: (key: string, value: string) => ipcRenderer.invoke('save-setting', key, value),
-  getUsageStats: () => ipcRenderer.invoke('get-usage-stats')
+  getUsageStats: () => ipcRenderer.invoke('get-usage-stats'),
+
+  // 模块: 划词高亮与笔记
+  addHighlight: (input: { entryId: string; selectedText: string; prefixText?: string; suffixText?: string; color: string; note?: string }) => ipcRenderer.invoke('add-highlight', input),
+  getHighlights: (entryId: string) => ipcRenderer.invoke('get-highlights', entryId),
+  updateHighlight: (id: string, fields: { color?: string; note?: string }) => ipcRenderer.invoke('update-highlight', id, fields),
+  deleteHighlight: (id: string) => ipcRenderer.invoke('delete-highlight', id)
 })

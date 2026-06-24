@@ -6,6 +6,7 @@ import { ArticleService } from './services/ArticleService'
 import { CleaningService } from './services/CleaningService'
 import { ExportService } from './services/ExportService'
 import { FeedService } from './services/FeedService'
+import { HighlightService } from './services/HighlightService'
 import { SettingsService } from './services/SettingsService'
 import { SummaryService } from './services/SummaryService'
 import { TagService } from './services/TagService'
@@ -23,6 +24,7 @@ let settingsService: SettingsService | null = null
 let summaryService: SummaryService | null = null
 let translationService: TranslationService | null = null
 let tagSuggestionService: TagSuggestionService | null = null
+let highlightService: HighlightService | null = null
 let autoRefreshTimer: NodeJS.Timeout | null = null
 
 const AUTO_REFRESH_CHECK_INTERVAL_MS = 60 * 1000
@@ -208,6 +210,16 @@ function registerIpcHandlers() {
       mainWindow?.webContents.send('translate-progress', { articleId, total, ...segment })
     }))
   )
+
+  // 模块: 划词高亮与笔记
+  ipcMain.handle('add-highlight', async (_event, input: { entryId: string; selectedText: string; prefixText?: string; suffixText?: string; color: string; note?: string }) =>
+    cloneForIpc(getHighlightService().add(input)))
+  ipcMain.handle('get-highlights', async (_event, entryId: string) =>
+    cloneForIpc(getHighlightService().list(entryId)))
+  ipcMain.handle('update-highlight', async (_event, id: string, fields: { color?: string; note?: string }) =>
+    getHighlightService().update(id, fields))
+  ipcMain.handle('delete-highlight', async (_event, id: string) =>
+    getHighlightService().remove(id))
 }
 
 function initializeServices() {
@@ -223,6 +235,7 @@ function initializeServices() {
   summaryService = new SummaryService(repository, () => getSettingsService().getLLMConfig())
   translationService = new TranslationService(repository, () => getSettingsService().getLLMConfig())
   tagSuggestionService = new TagSuggestionService(repository, () => getSettingsService().getLLMConfig())
+  highlightService = new HighlightService(repository)
   startAutoRefreshScheduler()
 }
 
@@ -290,6 +303,13 @@ function getTagSuggestionService(): TagSuggestionService {
     throw new Error('TagSuggestionService is not initialized')
   }
   return tagSuggestionService
+}
+
+function getHighlightService(): HighlightService {
+  if (!highlightService) {
+    throw new Error('HighlightService is not initialized')
+  }
+  return highlightService
 }
 
 function cloneForIpc<T>(value: T): T {
