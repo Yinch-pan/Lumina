@@ -397,6 +397,33 @@ const renderedHtml = computed(() => {
   return html
 })
 
+const enhanceCodeBlocks = () => {
+  const container = articleRef.value
+  if (!container) return
+  const pres = container.querySelectorAll('pre')
+  pres.forEach((pre) => {
+    const el = pre as HTMLElement
+    if (el.dataset.copyEnhanced === '1') return
+    el.dataset.copyEnhanced = '1'
+    el.style.position = 'relative'
+    const btn = document.createElement('button')
+    btn.className = 'code-copy-btn'
+    btn.textContent = '复制'
+    btn.addEventListener('click', () => {
+      const code = el.querySelector('code')
+      const text = (code ?? el).textContent ?? ''
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '已复制 ✓'
+        setTimeout(() => { btn.textContent = '复制' }, 1500)
+      }).catch(() => {
+        btn.textContent = '复制失败'
+        setTimeout(() => { btn.textContent = '复制' }, 1500)
+      })
+    })
+    el.appendChild(btn)
+  })
+}
+
 const onTextSelect = () => {
   const sel = window.getSelection()
   if (!sel || sel.isCollapsed || !sel.toString().trim()) {
@@ -505,6 +532,15 @@ watch(
     const max = el.scrollHeight - el.clientHeight
     el.scrollTop = max > 0 ? percent * max : 0
   }
+)
+
+watch(
+  renderedHtml,
+  async () => {
+    await nextTick()
+    enhanceCodeBlocks()
+  },
+  { immediate: true }
 )
 </script>
 
@@ -1060,4 +1096,19 @@ watch(
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .back-top-btn:hover { border-color: #409eff; color: #409eff; }
+
+.article-content :deep(pre) { position: relative; }
+.code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  color: #f9fafb;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.code-copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
 </style>
