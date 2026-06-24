@@ -186,9 +186,12 @@ const renderedHtml = computed(() => {
     if (!h.selectedText) continue
     // 仅处理不含尖括号的纯文本，避免破坏 HTML 标签结构
     if (h.selectedText.includes('<') || h.selectedText.includes('>')) continue
+    // color 白名单：防止被篡改的颜色值逃逸 class 属性造成 XSS
+    const color = HIGHLIGHT_COLORS.includes(h.color) ? h.color : 'yellow'
     const re = new RegExp(escapeRegExp(h.selectedText))
-    const mark = `<mark class="hl hl-${h.color}" data-hl-id="${h.id}">${h.selectedText}</mark>`
-    html = html.replace(re, mark)
+    const mark = `<mark class="hl hl-${color}" data-hl-id="${h.id}">${h.selectedText}</mark>`
+    // 用函数式替换，避免 selectedText 中的 $ 被当作 $&/$1 等特殊替换符
+    html = html.replace(re, () => mark)
   }
   return html
 })
