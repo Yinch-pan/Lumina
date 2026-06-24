@@ -42,6 +42,10 @@ export class ArticleService implements IArticleService {
     return this.repository.getUnreadArticles()
   }
 
+  searchArticles(query: string): Article[] {
+    return this.repository.searchArticles(query)
+  }
+
   async getArticleContent(articleId: string): Promise<ArticleContent> {
     const entry = this.repository.getEntryRowById(articleId)
     if (!entry) {

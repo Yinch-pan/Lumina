@@ -21,8 +21,10 @@
         :selectedArticleId="selectedArticleId"
         :filter="articleFilter"
         :isLoading="isLoadingArticles"
+        :searchQuery="searchQuery"
         @select-article="handleSelectArticle"
         @change-filter="articleFilter = $event"
+        @search="handleSearch"
       />
       <ReaderView
         :article="selectedArticle"
@@ -286,6 +288,23 @@ const loadArticles = async (feedId: string) => {
   } finally {
     isLoadingArticles.value = false
   }
+}
+
+const searchQuery = ref('')
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+const handleSearch = (query: string) => {
+  searchQuery.value = query
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    if (!window.electronAPI) return
+    if (!query.trim()) { await loadArticles(selectedFeedId.value); return }
+    try {
+      articleList.value = await window.electronAPI.searchArticles(query)
+      selectedArticleId.value = ''
+      selectedArticleContent.value = null
+    } catch (error) { console.error('Search failed', error) }
+  }, 250)
 }
 
 const handleSelectFeed = async (feedId: string) => {

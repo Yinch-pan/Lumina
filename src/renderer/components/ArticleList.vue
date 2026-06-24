@@ -25,6 +25,13 @@
           已读
         </button>
       </div>
+        <input
+          class="search-input"
+          type="text"
+          :value="searchQuery"
+          placeholder="搜索文章..."
+          @input="$emit('search', ($event.target as HTMLInputElement).value)"
+        />
     </div>
 
     <div v-if="isLoading" class="article-state">
@@ -79,11 +86,13 @@ defineProps<{
   selectedArticleId: string
   filter: ArticleFilter
   isLoading: boolean
+  searchQuery: string
 }>()
 
 defineEmits<{
   'select-article': [articleId: string]
   'change-filter': [filter: ArticleFilter]
+  search: [query: string]
 }>()
 </script>
 
@@ -246,4 +255,15 @@ defineEmits<{
     transform: rotate(360deg);
   }
 }
+
+.search-input {
+  width: 100%;
+  margin-top: 12px;
+  padding: 7px 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.search-input:focus { outline: none; border-color: #409eff; }
 </style>

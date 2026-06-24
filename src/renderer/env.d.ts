@@ -28,6 +28,7 @@ declare global {
       exportOpml: (filePath: string) => Promise<void>
       markArticleRead: (articleId: string) => Promise<void>
       markArticleUnread: (articleId: string) => Promise<void>
+      searchArticles: (query: string) => Promise<Article[]>
 
       // 模块 C: AI 功能
       cleanArticle: (articleId: string) => Promise<ArticleContent>

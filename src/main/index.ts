@@ -117,6 +117,9 @@ function registerIpcHandlers() {
   })
   ipcMain.handle('get-all-articles', async () => cloneForIpc(await getArticleService().getAllArticles()))
   ipcMain.handle('get-unread-articles', async () => cloneForIpc(await getArticleService().getUnreadArticles()))
+  ipcMain.handle('search-articles', async (_event, query: string) =>
+    cloneForIpc(getArticleService().searchArticles(query))
+  )
   ipcMain.handle('get-article-content', async (_event, articleId: string) =>
     cloneForIpc(await getArticleService().getArticleContent(articleId))
   )
