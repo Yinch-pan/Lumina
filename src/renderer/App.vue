@@ -31,6 +31,7 @@
       <ReaderView
         :article="selectedArticle"
         :translationSegments="translationSegments"
+        :highlights="highlights"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -38,6 +39,8 @@
         @toggle-star="handleReaderToggleStar"
         @export="handleExport"
         @scroll="handleSaveScroll"
+        @add-highlight="handleAddHighlight"
+        @delete-highlight="handleDeleteHighlight"
       />
     </div>
 
@@ -182,6 +185,18 @@ const selectedArticleId = ref('1')
 const selectedArticleContent = ref<ArticleContent | null>(mockArticleContent)
 const translationSegments = ref<
   Array<{ index: number; source: string; translated: string; status: 'success' | 'failed' }>
+>([])
+const highlights = ref<
+  Array<{
+    id: string
+    entryId: string
+    selectedText: string
+    prefixText: string | null
+    suffixText: string | null
+    color: string
+    note: string | null
+    createdAt: number
+  }>
 >([])
 let unsubscribeTranslate: (() => void) | null = null
 const articleList = ref<Article[]>(mockArticles)
@@ -340,6 +355,7 @@ const handleSelectFeed = async (feedId: string) => {
   selectedFeedId.value = feedId
   selectedArticleId.value = ''
   selectedArticleContent.value = null
+  highlights.value = []
   await loadArticles(feedId)
 }
 
@@ -350,6 +366,7 @@ const handleSelectTag = (tagName: string) => {
 const handleSelectArticle = async (articleId: string) => {
   selectedArticleId.value = articleId
   translationSegments.value = []
+  highlights.value = []
   if (!window.electronAPI || useMockData.value) {
     selectedArticleContent.value = mockArticleContent
     return
@@ -358,6 +375,7 @@ const handleSelectArticle = async (articleId: string) => {
   try {
     selectedArticleContent.value = await window.electronAPI.getArticleContent(articleId)
     await window.electronAPI.markArticleRead(articleId)
+    await loadHighlights(articleId)
     articleList.value = articleList.value.map((article) =>
       article.id === articleId ? { ...article, isRead: true } : article
     )
@@ -834,12 +852,48 @@ const handleSaveScroll = (articleId: string, percent: number) => {
     .catch((e) => console.error('Failed to save scroll', e))
 }
 
+const loadHighlights = async (articleId: string) => {
+  if (!window.electronAPI?.getHighlights) return
+  try {
+    highlights.value = await window.electronAPI.getHighlights(articleId)
+  } catch (e) {
+    console.error('Failed to load highlights', e)
+  }
+}
+
+const handleAddHighlight = async (input: {
+  selectedText: string
+  prefixText?: string
+  suffixText?: string
+  color: string
+  note?: string
+}) => {
+  if (!window.electronAPI || !selectedArticleId.value) return
+  try {
+    await window.electronAPI.addHighlight({ entryId: selectedArticleId.value, ...input })
+    await loadHighlights(selectedArticleId.value)
+  } catch (e) {
+    console.error('Failed to add highlight', e)
+  }
+}
+
+const handleDeleteHighlight = async (id: string) => {
+  if (!window.electronAPI) return
+  try {
+    await window.electronAPI.deleteHighlight(id)
+    if (selectedArticleId.value) await loadHighlights(selectedArticleId.value)
+  } catch (e) {
+    console.error('Failed to delete highlight', e)
+  }
+}
+
 const handleSelectStarred = async () => {
   if (!window.electronAPI) return
   try {
     articleList.value = await window.electronAPI.getStarredArticles()
     selectedArticleId.value = ''
     selectedArticleContent.value = null
+    highlights.value = []
   } catch (error) {
     console.error('Failed to load starred', error)
   }

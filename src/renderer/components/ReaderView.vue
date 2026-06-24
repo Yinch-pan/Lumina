@@ -67,7 +67,13 @@
             <div class="ai-content">{{ article.translation }}</div>
           </section>
 
-          <article v-if="hasCleanedHtml" class="article-content" v-html="article.cleanedHtml"></article>
+          <article
+            v-if="hasCleanedHtml"
+            ref="articleRef"
+            class="article-content"
+            v-html="renderedHtml"
+            @mouseup="onTextSelect"
+          ></article>
           <div v-else class="content-fallback">
             <div class="fallback-title">&#27491;&#25991;&#26242;&#26102;&#26080;&#27861;&#26174;&#31034;</div>
             <p>&#35831;&#25171;&#24320;&#21407;&#25991;&#26597;&#30475;&#23436;&#25972;&#20869;&#23481;&#12290;</p>
@@ -75,6 +81,27 @@
               &#26597;&#30475;&#21407;&#25991;
             </a>
           </div>
+
+          <section v-if="allHighlights.length" class="notes-section">
+            <div class="ai-section-title">&#31508;&#35760;&#19982;&#39640;&#20142;</div>
+            <div v-for="h in allHighlights" :key="h.id" class="note-item">
+              <div class="note-quote" :class="'hl-' + h.color">{{ h.selectedText }}</div>
+              <div v-if="h.note" class="note-text">{{ h.note }}</div>
+              <button class="note-del" @click="emit('delete-highlight', h.id)">&#21024;&#38500;</button>
+            </div>
+          </section>
+        </div>
+
+        <div v-if="toolbar.visible" class="hl-toolbar" :style="{ top: toolbar.y + 'px', left: toolbar.x + 'px' }">
+          <button
+            v-for="c in HIGHLIGHT_COLORS"
+            :key="c"
+            class="hl-color"
+            :class="'hl-' + c"
+            :title="'&#39640;&#20142;&#65306;' + c"
+            @mousedown.prevent="applyHighlight(c)"
+          ></button>
+          <button class="hl-note-btn" @mousedown.prevent="applyHighlightWithNote">+&#31508;&#35760;</button>
         </div>
       </main>
     </div>
@@ -110,6 +137,16 @@ const props = defineProps<{
     translated: string
     status: 'success' | 'failed'
   }>
+  highlights?: Array<{
+    id: string
+    entryId: string
+    selectedText: string
+    prefixText: string | null
+    suffixText: string | null
+    color: string
+    note: string | null
+    createdAt: number
+  }>
 }>()
 
 const emit = defineEmits<{
@@ -120,14 +157,105 @@ const emit = defineEmits<{
   'toggle-star': []
   export: []
   scroll: [articleId: string, percent: number]
+  'add-highlight': [
+    input: {
+      selectedText: string
+      prefixText?: string
+      suffixText?: string
+      color: string
+      note?: string
+    }
+  ]
+  'delete-highlight': [id: string]
 }>()
 
 const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()))
+
+const HIGHLIGHT_COLORS = ['yellow', 'green', 'blue', 'pink', 'orange']
+const articleRef = ref<HTMLElement | null>(null)
+const toolbar = ref<{ visible: boolean; x: number; y: number }>({ visible: false, x: 0, y: 0 })
+let pendingSelection: { text: string; prefix: string; suffix: string } | null = null
+
+const allHighlights = computed(() => props.highlights ?? [])
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const renderedHtml = computed(() => {
+  let html = props.article?.cleanedHtml ?? ''
+  for (const h of allHighlights.value) {
+    if (!h.selectedText) continue
+    // 仅处理不含尖括号的纯文本，避免破坏 HTML 标签结构
+    if (h.selectedText.includes('<') || h.selectedText.includes('>')) continue
+    const re = new RegExp(escapeRegExp(h.selectedText))
+    const mark = `<mark class="hl hl-${h.color}" data-hl-id="${h.id}">${h.selectedText}</mark>`
+    html = html.replace(re, mark)
+  }
+  return html
+})
+
+const onTextSelect = () => {
+  const sel = window.getSelection()
+  if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+    toolbar.value.visible = false
+    return
+  }
+  const text = sel.toString()
+  const range = sel.getRangeAt(0)
+  const container = articleRef.value
+  if (!container || !container.contains(range.commonAncestorContainer)) {
+    toolbar.value.visible = false
+    return
+  }
+  const fullText = container.textContent ?? ''
+  const idx = fullText.indexOf(text)
+  const prefix = idx >= 0 ? fullText.slice(Math.max(0, idx - 30), idx) : ''
+  const suffix = idx >= 0 ? fullText.slice(idx + text.length, idx + text.length + 30) : ''
+  pendingSelection = { text, prefix, suffix }
+  const rect = range.getBoundingClientRect()
+  const host = contentRef.value
+  const hostRect = host?.getBoundingClientRect()
+  if (hostRect && host) {
+    toolbar.value = {
+      visible: true,
+      x: rect.left - hostRect.left + host.scrollLeft,
+      y: rect.top - hostRect.top + host.scrollTop - 40
+    }
+  }
+}
+
+const applyHighlight = (color: string) => {
+  if (!pendingSelection) return
+  emit('add-highlight', {
+    selectedText: pendingSelection.text,
+    prefixText: pendingSelection.prefix,
+    suffixText: pendingSelection.suffix,
+    color
+  })
+  toolbar.value.visible = false
+  pendingSelection = null
+  window.getSelection()?.removeAllRanges()
+}
+
+const applyHighlightWithNote = () => {
+  if (!pendingSelection) return
+  const note = window.prompt('为这段高亮添加笔记', '') ?? ''
+  emit('add-highlight', {
+    selectedText: pendingSelection.text,
+    prefixText: pendingSelection.prefix,
+    suffixText: pendingSelection.suffix,
+    color: 'yellow',
+    note: note || undefined
+  })
+  toolbar.value.visible = false
+  pendingSelection = null
+  window.getSelection()?.removeAllRanges()
+}
 
 const contentRef = ref<HTMLElement | null>(null)
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 const onScroll = () => {
+  toolbar.value.visible = false
   const el = contentRef.value
   if (!el) return
   // 在调度时捕获当前文章 id，避免防抖回调在切换文章后把旧位置存到新文章
@@ -145,6 +273,9 @@ const onScroll = () => {
 watch(
   () => props.article?.id,
   async () => {
+    toolbar.value.visible = false
+    pendingSelection = null
+    window.getSelection()?.removeAllRanges()
     await nextTick()
     const el = contentRef.value
     if (!el || !props.article) return
@@ -250,6 +381,7 @@ watch(
   overflow-y: auto;
   padding: 32px;
   min-height: 0;
+  position: relative;
 }
 
 .content-section {
@@ -454,5 +586,105 @@ watch(
 
 .empty-text {
   font-size: 16px;
+}
+
+.hl {
+  padding: 0 1px;
+  border-radius: 2px;
+}
+.hl-yellow {
+  background: #fff3a0;
+}
+.hl-green {
+  background: #b8f0c0;
+}
+.hl-blue {
+  background: #b8dcff;
+}
+.hl-pink {
+  background: #ffc8dd;
+}
+.hl-orange {
+  background: #ffd8a8;
+}
+
+.article-content :deep(mark.hl) {
+  padding: 0 1px;
+  border-radius: 2px;
+}
+.article-content :deep(mark.hl-yellow) {
+  background: #fff3a0;
+}
+.article-content :deep(mark.hl-green) {
+  background: #b8f0c0;
+}
+.article-content :deep(mark.hl-blue) {
+  background: #b8dcff;
+}
+.article-content :deep(mark.hl-pink) {
+  background: #ffc8dd;
+}
+.article-content :deep(mark.hl-orange) {
+  background: #ffd8a8;
+}
+
+.hl-toolbar {
+  position: absolute;
+  z-index: 50;
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.hl-color {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+.hl-note-btn {
+  font-size: 12px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.notes-section {
+  margin-top: 24px;
+  border-top: 1px solid #e4e7ed;
+  padding-top: 16px;
+}
+.note-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.note-quote {
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  align-self: flex-start;
+}
+.note-text {
+  font-size: 13px;
+  color: #4b5563;
+}
+.note-del {
+  font-size: 12px;
+  color: #c0392b;
+  background: none;
+  border: none;
+  cursor: pointer;
+  align-self: flex-start;
+  padding: 0;
 }
 </style>
