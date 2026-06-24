@@ -68,6 +68,7 @@ declare global {
       saveLLMConfig: (config: LLMConfig) => Promise<void>
       getSetting: (key: string) => Promise<string | null>
       saveSetting: (key: string, value: string) => Promise<void>
+      getUsageStats: () => Promise<Array<{ model: string; agentType: string; day: string; requests: number; totalTokens: number }>>
     }
   }
 }

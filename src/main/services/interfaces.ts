@@ -186,4 +186,7 @@ export interface ISettingsService {
 
   // 保存应用设置
   saveSetting(key: string, value: string): Promise<void>
+
+  // 获取 AI 用量统计
+  getUsageStats(): Promise<Array<{ model: string; agentType: string; day: string; requests: number; totalTokens: number }>>
 }

@@ -41,4 +41,8 @@ export class SettingsService implements ISettingsService {
   async saveSetting(key: string, value: string): Promise<void> {
     this.repository.setSetting(key, value)
   }
+
+  async getUsageStats(): Promise<Array<{ model: string; agentType: string; day: string; requests: number; totalTokens: number }>> {
+    return this.repository.getUsageStats()
+  }
 }

@@ -84,6 +84,30 @@
         <button class="btn-primary" :disabled="isSaving" @click="saveReadingSettings">保存阅读设置</button>
       </div>
 
+    <!-- AI 用量统计 -->
+      <div class="settings-section">
+        <h2 class="section-title">📊 AI 用量统计</h2>
+        <div class="section-description">按模型、类型、日期统计的 token 消耗与调用次数。</div>
+        <div v-if="usageStats.length === 0" class="form-hint">暂无用量记录</div>
+        <table v-else class="usage-table">
+          <thead>
+            <tr><th>日期</th><th>模型</th><th>类型</th><th>调用次数</th><th>Tokens</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, i) in usageStats" :key="i">
+              <td>{{ row.day }}</td>
+              <td>{{ row.model }}</td>
+              <td>{{ row.agentType === 'summary' ? '摘要' : row.agentType === 'translation' ? '翻译' : row.agentType }}</td>
+              <td>{{ row.requests }}</td>
+              <td>{{ row.totalTokens }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr><td colspan="3">合计</td><td>{{ totalRequests }}</td><td>{{ totalTokensSum }}</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
     <!-- 应用信息 -->
       <div class="settings-section">
       <h2 class="section-title">ℹ️ 关于 Mercury</h2>
@@ -107,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const emit = defineEmits<{
   'close': []
@@ -128,6 +152,11 @@ const readingSettings = ref({
 
 const isSaving = ref(false)
 const statusMessage = ref('')
+
+type UsageRow = { model: string; agentType: string; day: string; requests: number; totalTokens: number }
+const usageStats = ref<UsageRow[]>([])
+const totalRequests = computed(() => usageStats.value.reduce((s, r) => s + r.requests, 0))
+const totalTokensSum = computed(() => usageStats.value.reduce((s, r) => s + r.totalTokens, 0))
 
 onMounted(async () => {
   if (!window.electronAPI) {
@@ -151,6 +180,11 @@ onMounted(async () => {
     if (fontSize) readingSettings.value.fontSize = fontSize
     if (lineHeight) readingSettings.value.lineHeight = lineHeight
     if (theme) readingSettings.value.theme = theme
+
+    // 加载 AI 用量统计
+    if (window.electronAPI.getUsageStats) {
+      usageStats.value = await window.electronAPI.getUsageStats()
+    }
   } catch (error) {
     console.error('Failed to load settings', error)
   }
@@ -360,4 +394,9 @@ const saveReadingSettings = async () => {
 .info-link:hover {
   text-decoration: underline;
 }
+
+.usage-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.usage-table th, .usage-table td { border: 1px solid var(--border-color, #e4e7ed); padding: 6px 10px; text-align: left; }
+.usage-table thead th { background: #f5f7fa; font-weight: 600; }
+.usage-table tfoot td { font-weight: 600; background: #fafafa; }
 </style>

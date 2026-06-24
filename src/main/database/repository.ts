@@ -662,6 +662,20 @@ export class Repository {
       })
   }
 
+  getUsageStats(): Array<{ model: string; agentType: string; day: string; requests: number; totalTokens: number }> {
+    return this.db.prepare(`
+      SELECT llm_usage.model AS model,
+             agent_runs.agent_type AS agentType,
+             date(llm_usage.created_at / 1000, 'unixepoch') AS day,
+             COUNT(*) AS requests,
+             COALESCE(SUM(llm_usage.total_tokens), 0) AS totalTokens
+      FROM llm_usage
+      JOIN agent_runs ON agent_runs.id = llm_usage.agent_run_id
+      GROUP BY model, agentType, day
+      ORDER BY day DESC, model
+    `).all() as Array<{ model: string; agentType: string; day: string; requests: number; totalTokens: number }>
+  }
+
   private getLatestAgentOutput(entryId: string, agentType: 'summary' | 'translation'): string | undefined {
     const row = this.db
       .prepare(
