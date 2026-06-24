@@ -35,6 +35,10 @@ function main() {
 
   assert.deepEqual(repo.searchArticles('  '), [])
 
+  // 纯标点查询不应抛错，返回空结果
+  assert.deepEqual(repo.searchArticles('!!!'), [])
+  assert.deepEqual(repo.searchArticles('---'), [])
+
   db.close()
   fs.rmSync(tempDir, { recursive: true, force: true })
 }

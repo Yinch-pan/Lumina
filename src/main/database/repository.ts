@@ -316,14 +316,19 @@ export class Repository {
     const trimmed = query.trim()
     if (!trimmed) return []
     const ftsQuery = trimmed.split(/\s+/).map((t) => `"${t.replace(/"/g, '""')}"`).join(' ')
-    const rows = this.db.prepare(`
-      SELECT entries.*
-      FROM entries_fts
-      JOIN entries ON entries.rowid = entries_fts.rowid
-      WHERE entries_fts MATCH ?
-      ORDER BY COALESCE(entries.published_at, entries.created_at) DESC
-    `).all(ftsQuery) as EntryRow[]
-    return rows.map((row) => this.toArticle(row))
+    try {
+      const rows = this.db.prepare(`
+        SELECT entries.*
+        FROM entries_fts
+        JOIN entries ON entries.rowid = entries_fts.rowid
+        WHERE entries_fts MATCH ?
+        ORDER BY COALESCE(entries.published_at, entries.created_at) DESC
+      `).all(ftsQuery) as EntryRow[]
+      return rows.map((row) => this.toArticle(row))
+    } catch {
+      // 纯标点/特殊字符在 unicode61 分词后为空，FTS5 可能抛语法错误——视作无结果
+      return []
+    }
   }
 
   getArticleContent(entryId: string): ArticleContent | undefined {
