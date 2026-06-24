@@ -1,15 +1,15 @@
 <template>
   <div class="reader-view">
     <div v-if="article" class="reader-container">
-      <header class="reader-header">
+      <header v-if="readerMode === 'clean'" class="reader-header">
         <h1 class="reader-title">{{ article.title }}</h1>
 
         <div class="reader-meta">
           <span v-if="article.author">{{ article.author }}</span>
           <span>{{ article.publishedAt }}</span>
-          <a :href="article.sourceUrl" target="_blank" rel="noopener noreferrer" class="source-link">
+          <button type="button" class="source-link" @click="openInlineWeb(article.sourceUrl)">
             &#26597;&#30475;&#21407;&#25991;
-          </a>
+          </button>
         </div>
 
         <div class="reader-actions">
@@ -48,7 +48,7 @@
         </div>
       </header>
 
-      <main ref="contentRef" class="reader-content" @scroll="onScroll">
+      <main v-if="readerMode === 'clean'" ref="contentRef" class="reader-content" @scroll="onScroll">
         <div class="content-section">
           <section v-if="article.summary" class="ai-section">
             <div class="ai-section-title">AI &#25688;&#35201;</div>
@@ -77,9 +77,9 @@
           <div v-else class="content-fallback">
             <div class="fallback-title">&#27491;&#25991;&#26242;&#26102;&#26080;&#27861;&#26174;&#31034;</div>
             <p>&#35831;&#25171;&#24320;&#21407;&#25991;&#26597;&#30475;&#23436;&#25972;&#20869;&#23481;&#12290;</p>
-            <a :href="article.sourceUrl" target="_blank" rel="noopener noreferrer" class="fallback-link">
+            <button type="button" class="fallback-link" @click="openInlineWeb(article.sourceUrl)">
               &#26597;&#30475;&#21407;&#25991;
-            </a>
+            </button>
           </div>
 
           <section v-if="allHighlights.length" class="notes-section">
@@ -104,6 +104,43 @@
           <button class="hl-note-btn" @mousedown.prevent="applyHighlightWithNote">+&#31508;&#35760;</button>
         </div>
       </main>
+
+      <section v-else class="web-view">
+        <div class="web-toolbar">
+          <button
+            class="web-nav-btn"
+            :disabled="!canGoBack"
+            title="&#21518;&#36864;"
+            @click="webGoBack"
+          >
+            <ChevronLeft class="web-nav-icon" />
+          </button>
+          <button
+            class="web-nav-btn"
+            :disabled="!canGoForward"
+            title="&#21069;&#36827;"
+            @click="webGoForward"
+          >
+            <ChevronRight class="web-nav-icon" />
+          </button>
+          <button class="web-nav-btn" title="&#21047;&#26032;" @click="webReload">
+            <RotateCw class="web-nav-icon" />
+          </button>
+          <span class="web-url" :title="currentUrl">{{ currentUrl }}</span>
+          <button class="web-text-btn" title="&#22312;&#31995;&#32479;&#27983;&#35272;&#22120;&#25171;&#24320;" @click="openInSystemBrowser">
+            <ExternalLink class="web-nav-icon" />
+          </button>
+          <button class="web-text-btn web-back-reader" @click="closeInlineWeb">
+            <BookOpen class="web-nav-icon" />
+            <span>&#36820;&#22238;&#38405;&#35835;&#35270;&#22270;</span>
+          </button>
+        </div>
+        <webview
+          ref="webviewRef"
+          class="web-frame"
+          :src="webUrl"
+        ></webview>
+      </section>
     </div>
 
     <div v-else class="empty-state">
@@ -114,8 +151,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
-import { BookOpen, Circle, Download, FileText, Languages, Star, Tag } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import {
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Download,
+  ExternalLink,
+  FileText,
+  Languages,
+  RotateCw,
+  Star,
+  Tag
+} from 'lucide-vue-next'
 
 const props = defineProps<{
   article: {
@@ -177,6 +226,73 @@ const toolbar = ref<{ visible: boolean; x: number; y: number }>({ visible: false
 let pendingSelection: { text: string; prefix: string; suffix: string } | null = null
 
 const allHighlights = computed(() => props.highlights ?? [])
+
+// 内嵌原文视图（迷你浏览器）
+interface WebviewEl extends HTMLElement {
+  src: string
+  goBack(): void
+  goForward(): void
+  reload(): void
+  canGoBack(): boolean
+  canGoForward(): boolean
+  getURL(): string
+}
+
+const readerMode = ref<'clean' | 'web'>('clean')
+const webUrl = ref('')
+const currentUrl = ref('')
+const canGoBack = ref(false)
+const canGoForward = ref(false)
+const webviewRef = ref<WebviewEl | null>(null)
+
+const syncNavState = () => {
+  const wv = webviewRef.value
+  if (!wv) return
+  canGoBack.value = wv.canGoBack()
+  canGoForward.value = wv.canGoForward()
+  currentUrl.value = wv.getURL()
+}
+
+const onWebNavigate = () => syncNavState()
+
+const attachWebviewListeners = () => {
+  const wv = webviewRef.value
+  if (!wv) return
+  wv.addEventListener('did-navigate', onWebNavigate)
+  wv.addEventListener('did-navigate-in-page', onWebNavigate)
+}
+
+const detachWebviewListeners = () => {
+  const wv = webviewRef.value
+  if (!wv) return
+  wv.removeEventListener('did-navigate', onWebNavigate)
+  wv.removeEventListener('did-navigate-in-page', onWebNavigate)
+}
+
+const openInlineWeb = async (url: string) => {
+  if (!url) return
+  webUrl.value = url
+  currentUrl.value = url
+  canGoBack.value = false
+  canGoForward.value = false
+  readerMode.value = 'web'
+  await nextTick()
+  attachWebviewListeners()
+}
+
+const closeInlineWeb = () => {
+  detachWebviewListeners()
+  readerMode.value = 'clean'
+}
+
+const webGoBack = () => webviewRef.value?.goBack()
+const webGoForward = () => webviewRef.value?.goForward()
+const webReload = () => webviewRef.value?.reload()
+const openInSystemBrowser = () => {
+  if (currentUrl.value) void window.electronAPI?.openExternal(currentUrl.value)
+}
+
+onBeforeUnmount(detachWebviewListeners)
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -276,6 +392,12 @@ const onScroll = () => {
 watch(
   () => props.article?.id,
   async () => {
+    // 切换文章时复位内嵌网页，避免上一篇的页面残留到下一篇
+    if (readerMode.value === 'web') {
+      detachWebviewListeners()
+      readerMode.value = 'clean'
+      webUrl.value = ''
+    }
     toolbar.value.visible = false
     pendingSelection = null
     window.getSelection()?.removeAllRanges()
@@ -336,11 +458,88 @@ watch(
 .fallback-link {
   color: #2563eb;
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .source-link:hover,
 .fallback-link:hover {
   text-decoration: underline;
+}
+
+.web-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.web-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e4e7ed;
+  flex-shrink: 0;
+  background: #fafafa;
+}
+
+.web-nav-btn,
+.web-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid #dcdfe6;
+  background: #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.web-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.web-nav-btn:not(:disabled):hover,
+.web-text-btn:hover {
+  border-color: #409eff;
+  color: #2563eb;
+  background: #f8fbff;
+}
+
+.web-nav-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.web-url {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #909399;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.web-back-reader {
+  flex-shrink: 0;
+}
+
+.web-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  min-height: 0;
 }
 
 .reader-actions {

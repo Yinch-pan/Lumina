@@ -76,6 +76,9 @@ declare global {
       getHighlights: (entryId: string) => Promise<Array<{ id: string; entryId: string; selectedText: string; prefixText: string | null; suffixText: string | null; color: string; note: string | null; createdAt: number }>>
       updateHighlight: (id: string, fields: { color?: string; note?: string }) => Promise<void>
       deleteHighlight: (id: string) => Promise<void>
+
+      // 在系统默认浏览器中打开外部链接
+      openExternal: (url: string) => Promise<void>
     }
   }
 }

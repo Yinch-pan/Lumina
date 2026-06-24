@@ -36,8 +36,8 @@
   - `<webview :src="webUrl">` 占满剩余空间。
 - webview 事件接线：
   - `did-navigate` / `did-navigate-in-page` → 更新 `currentUrl`，并刷新 `canGoBack()/canGoForward()`。
-  - `new-window` → 阻止默认，改为 `electronAPI.openExternal(url)`（不无限开新内嵌页）。
   - 后退/前进/刷新按钮调用 webview 的 `goBack()/goForward()/reload()`。
+- webview 内的弹窗 / `target=_blank` 拦截放在主进程：Electron 38 已移除 webview 的 `new-window` DOM 事件，改用主进程 `web-contents-created` + `setWindowOpenHandler`，对 `getType() === 'webview'` 的 webContents 一律 `deny`，并把 http/https 链接交给 `shell.openExternal`。
 - 文章切换 watch（`props.article.id`）中复位 `readerMode='clean'`，避免上一篇的网页残留到下一篇。
 - TS/模板需识别 `webview` 自定义元素（在 `<script setup>` 处用合适方式声明/忽略类型）。
 

@@ -101,5 +101,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addHighlight: (input: { entryId: string; selectedText: string; prefixText?: string; suffixText?: string; color: string; note?: string }) => ipcRenderer.invoke('add-highlight', input),
   getHighlights: (entryId: string) => ipcRenderer.invoke('get-highlights', entryId),
   updateHighlight: (id: string, fields: { color?: string; note?: string }) => ipcRenderer.invoke('update-highlight', id, fields),
-  deleteHighlight: (id: string) => ipcRenderer.invoke('delete-highlight', id)
+  deleteHighlight: (id: string) => ipcRenderer.invoke('delete-highlight', id),
+
+  // 在系统默认浏览器中打开外部链接
+  openExternal: (url: string) => ipcRenderer.invoke('open-external-url', url)
 })

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import * as path from 'path'
 import { initDatabase } from './database/init'
 import { Repository } from './database/repository'
@@ -39,7 +39,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webviewTag: true
     }
   })
 
@@ -220,6 +221,18 @@ function registerIpcHandlers() {
     getHighlightService().update(id, fields))
   ipcMain.handle('delete-highlight', async (_event, id: string) =>
     getHighlightService().remove(id))
+  ipcMain.handle('open-external-url', async (_event, url: string) => {
+    let parsed: URL
+    try {
+      parsed = new URL(String(url))
+    } catch {
+      throw new Error('无效的链接')
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('仅支持打开 http/https 链接')
+    }
+    await shell.openExternal(parsed.toString())
+  })
 }
 
 function initializeServices() {
@@ -349,6 +362,22 @@ app.whenReady().then(() => {
   initializeServices()
   registerIpcHandlers()
   createWindow()
+
+  // 拦截 <webview> 内的弹窗 / target=_blank：不开新窗口，转交系统浏览器
+  app.on('web-contents-created', (_event, contents) => {
+    if (contents.getType() !== 'webview') return
+    contents.setWindowOpenHandler(({ url }) => {
+      try {
+        const parsed = new URL(url)
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+          void shell.openExternal(parsed.toString())
+        }
+      } catch {
+        // 忽略无效 URL
+      }
+      return { action: 'deny' }
+    })
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
