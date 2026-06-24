@@ -106,7 +106,20 @@ export interface ISummaryService {
  */
 export interface ITranslationService {
   // 翻译文章
-  translate(articleId: string, targetLang: string): Promise<string>
+  translate(
+    articleId: string,
+    targetLang: string,
+    onProgress?: (
+      segment: {
+        index: number
+        source: string
+        translated: string
+        status: 'success' | 'failed'
+        error?: string
+      },
+      total: number
+    ) => void
+  ): Promise<string>
 }
 
 /**

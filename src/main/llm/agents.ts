@@ -160,4 +160,16 @@ export class TranslationAgent {
     }
     return await this.provider.chat(messages, chatOptions)
   }
+
+  async translateSegment(text: string, targetLang: string, title?: string): Promise<LLMResponse> {
+    if (!text.trim()) {
+      throw new Error('Segment cannot be empty')
+    }
+    const prompt = renderPrompt(TranslationPromptTemplate, {
+      title: title ?? 'Untitled',
+      targetLang,
+      content: text
+    })
+    return await this.provider.chat([{ role: 'user', content: prompt }])
+  }
 }
