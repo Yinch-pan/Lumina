@@ -38,6 +38,7 @@ export interface Article {
   publishedAt: string
   excerpt: string
   isRead: boolean
+  isStarred?: boolean
   tags: string[]
 }
 
@@ -52,6 +53,7 @@ export interface ArticleContent {
   cleanedMarkdown?: string
   summary?: string
   translation?: string
+  isStarred?: boolean
   tags: string[]
 }
 

@@ -67,6 +67,7 @@ interface EntryRow {
   guid: string | null
   excerpt: string | null
   is_read: number
+  is_starred?: number
   created_at: number
 }
 
@@ -80,6 +81,7 @@ interface EntryContentRow {
   author: string | null
   published_at: number | null
   url: string
+  is_starred: number
 }
 
 interface TagRow {
@@ -342,7 +344,8 @@ export class Repository {
                 entries.title,
                 entries.author,
                 entries.published_at,
-                entries.url
+                entries.url,
+                entries.is_starred
          FROM entries
          LEFT JOIN entry_contents ON entry_contents.entry_id = entries.id
          WHERE entries.id = ?`
@@ -364,6 +367,7 @@ export class Repository {
       cleanedMarkdown: row.cleaned_markdown ?? undefined,
       summary: this.getLatestAgentOutput(entryId, 'summary') ?? '',
       translation: this.getLatestAgentOutput(entryId, 'translation') ?? '',
+      isStarred: row.is_starred === 1,
       tags: this.getArticleTags(entryId).map((tag) => tag.name)
     }
   }
@@ -392,6 +396,23 @@ export class Repository {
 
   markAsUnread(entryId: string): void {
     this.setReadState(entryId, false)
+  }
+
+  setStarred(entryId: string, starred: boolean): void {
+    this.db.prepare('UPDATE entries SET is_starred = ? WHERE id = ?').run(starred ? 1 : 0, entryId)
+  }
+
+  getStarredArticles(): Article[] {
+    const rows = this.db
+      .prepare(
+        `SELECT *
+         FROM entries
+         WHERE is_starred = 1
+         ORDER BY COALESCE(published_at, created_at) DESC`
+      )
+      .all() as EntryRow[]
+
+    return rows.map((row) => this.toArticle(row))
   }
 
   getArticleTags(entryId: string): Tag[] {
@@ -463,6 +484,7 @@ export class Repository {
       publishedAt: this.formatDate(row.published_at),
       excerpt: row.excerpt ? String(row.excerpt) : '',
       isRead: row.is_read === 1,
+      isStarred: row.is_starred === 1,
       tags: this.getArticleTags(row.id).map((tag) => tag.name)
     }
   }

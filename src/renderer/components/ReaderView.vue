@@ -37,6 +37,10 @@
             <Circle class="action-icon" />
             <span>&#26631;&#35760;&#26410;&#35835;</span>
           </button>
+          <button class="action-btn" @click="$emit('toggle-star')">
+            <Star class="action-icon" />
+            <span>{{ article && article.isStarred ? '取消收藏' : '收藏' }}</span>
+          </button>
           <button class="action-btn" @click="$emit('export')">
             <Download class="action-icon" />
             <span>&#23548;&#20986;</span>
@@ -84,7 +88,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { BookOpen, Circle, Download, FileText, Languages, Tag } from 'lucide-vue-next'
+import { BookOpen, Circle, Download, FileText, Languages, Star, Tag } from 'lucide-vue-next'
 
 const props = defineProps<{
   article: {
@@ -96,6 +100,7 @@ const props = defineProps<{
     cleanedHtml?: string
     summary?: string
     translation?: string
+    isStarred?: boolean
     tags: string[]
   } | null
   translationSegments?: Array<{
@@ -111,6 +116,7 @@ defineEmits<{
   translate: []
   'add-tag': []
   'mark-unread': []
+  'toggle-star': []
   export: []
 }>()
 

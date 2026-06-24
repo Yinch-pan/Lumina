@@ -15,6 +15,7 @@
         @import-opml="openOpmlDialog"
         @export-opml="handleExportOpml"
         @refresh="handleRefresh"
+        @select-starred="handleSelectStarred"
       />
       <ArticleList
         :articles="articles"
@@ -25,6 +26,7 @@
         @select-article="handleSelectArticle"
         @change-filter="articleFilter = $event"
         @search="handleSearch"
+        @toggle-star="handleToggleStar"
       />
       <ReaderView
         :article="selectedArticle"
@@ -33,6 +35,7 @@
         @translate="handleTranslate"
         @add-tag="handleAddTag"
         @mark-unread="handleMarkUnread"
+        @toggle-star="handleReaderToggleStar"
         @export="handleExport"
       />
     </div>
@@ -795,6 +798,39 @@ const handleMarkUnread = async () => {
   } catch (error) {
     console.error('Failed to mark article unread', error)
     alert(`标记未读失败：${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+const handleToggleStar = async (articleId: string) => {
+  if (!window.electronAPI) return
+  const article = articleList.value.find((a) => a.id === articleId)
+  const next = !article?.isStarred
+  try {
+    await window.electronAPI.setArticleStarred(articleId, next)
+    articleList.value = articleList.value.map((a) =>
+      a.id === articleId ? { ...a, isStarred: next } : a
+    )
+    if (selectedArticleContent.value && selectedArticleId.value === articleId) {
+      selectedArticleContent.value = { ...selectedArticleContent.value, isStarred: next }
+    }
+  } catch (error) {
+    console.error('Failed to toggle star', error)
+  }
+}
+
+const handleReaderToggleStar = async () => {
+  if (!selectedArticleId.value) return
+  await handleToggleStar(selectedArticleId.value)
+}
+
+const handleSelectStarred = async () => {
+  if (!window.electronAPI) return
+  try {
+    articleList.value = await window.electronAPI.getStarredArticles()
+    selectedArticleId.value = ''
+    selectedArticleContent.value = null
+  } catch (error) {
+    console.error('Failed to load starred', error)
   }
 }
 

@@ -99,6 +99,14 @@ export class ArticleService implements IArticleService {
   async markAsUnread(articleId: string): Promise<void> {
     this.repository.markAsUnread(articleId)
   }
+
+  setStarred(articleId: string, starred: boolean): void {
+    this.repository.setStarred(articleId, starred)
+  }
+
+  getStarredArticles(): Article[] {
+    return this.repository.getStarredArticles()
+  }
 }
 
 async function defaultFetchText(url: string): Promise<string> {

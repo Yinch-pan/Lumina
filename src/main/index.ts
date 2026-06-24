@@ -130,6 +130,12 @@ function registerIpcHandlers() {
   ipcMain.handle('mark-article-unread', async (_event, articleId: string) =>
     getArticleService().markAsUnread(articleId)
   )
+  ipcMain.handle('set-article-starred', async (_event, articleId: string, starred: boolean) =>
+    getArticleService().setStarred(articleId, starred)
+  )
+  ipcMain.handle('get-starred-articles', async () =>
+    cloneForIpc(getArticleService().getStarredArticles())
+  )
 
   // 模块 D: 标签管理
   ipcMain.handle('get-all-tags', async () => cloneForIpc(await getTagService().getAllTags()))

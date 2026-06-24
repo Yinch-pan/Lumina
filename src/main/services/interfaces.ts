@@ -81,6 +81,12 @@ export interface IArticleService {
 
   // 标记文章为未读
   markAsUnread(articleId: string): Promise<void>
+
+  // 设置文章收藏/星标状态
+  setStarred(articleId: string, starred: boolean): void
+
+  // 获取所有收藏文章
+  getStarredArticles(): Article[]
 }
 
 /**

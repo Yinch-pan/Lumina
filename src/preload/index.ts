@@ -29,6 +29,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportOpml: (filePath: string) => ipcRenderer.invoke('export-opml', filePath),
   markArticleRead: (articleId: string) => ipcRenderer.invoke('mark-article-read', articleId),
   markArticleUnread: (articleId: string) => ipcRenderer.invoke('mark-article-unread', articleId),
+  setArticleStarred: (articleId: string, starred: boolean) =>
+    ipcRenderer.invoke('set-article-starred', articleId, starred),
+  getStarredArticles: () => ipcRenderer.invoke('get-starred-articles'),
   searchArticles: (query: string) => ipcRenderer.invoke('search-articles', query),
 
   // 模块 C: AI 摘要与翻译

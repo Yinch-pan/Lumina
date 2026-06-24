@@ -55,6 +55,14 @@
       >
         <div class="article-header">
           <div class="article-title-text">{{ article.title }}</div>
+          <button
+            class="article-star"
+            :class="{ starred: article.isStarred }"
+            :title="article.isStarred ? '取消收藏' : '收藏'"
+            @click.stop="$emit('toggle-star', article.id)"
+          >
+            ★
+          </button>
           <div v-if="!article.isRead" class="article-unread-dot"></div>
         </div>
         <div class="article-meta">{{ article.author }} · {{ article.publishedAt }}</div>
@@ -81,6 +89,7 @@ defineProps<{
     publishedAt: string
     excerpt: string
     isRead: boolean
+    isStarred?: boolean
     tags: string[]
   }>
   selectedArticleId: string
@@ -92,6 +101,7 @@ defineProps<{
 defineEmits<{
   'select-article': [articleId: string]
   'change-filter': [filter: ArticleFilter]
+  'toggle-star': [articleId: string]
   search: [query: string]
 }>()
 </script>
@@ -213,6 +223,21 @@ defineEmits<{
   border-radius: 50%;
   margin-left: 8px;
   margin-top: 6px;
+}
+
+.article-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #d0d3d9;
+  line-height: 1;
+  padding: 0 2px;
+  margin-left: 4px;
+}
+
+.article-star.starred {
+  color: #f5a623;
 }
 
 .article-meta {

@@ -28,6 +28,8 @@ declare global {
       exportOpml: (filePath: string) => Promise<void>
       markArticleRead: (articleId: string) => Promise<void>
       markArticleUnread: (articleId: string) => Promise<void>
+      setArticleStarred: (articleId: string, starred: boolean) => Promise<void>
+      getStarredArticles: () => Promise<Article[]>
       searchArticles: (query: string) => Promise<Article[]>
 
       // 模块 C: AI 功能
