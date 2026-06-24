@@ -824,9 +824,8 @@ const handleReaderToggleStar = async () => {
   await handleToggleStar(selectedArticleId.value)
 }
 
-const handleSaveScroll = (percent: number) => {
-  if (!window.electronAPI || !selectedArticleId.value) return
-  const articleId = selectedArticleId.value
+const handleSaveScroll = (articleId: string, percent: number) => {
+  if (!window.electronAPI || !articleId) return
   window.electronAPI
     .saveScrollPercent(articleId, percent)
     .catch((e) => console.error('Failed to save scroll', e))

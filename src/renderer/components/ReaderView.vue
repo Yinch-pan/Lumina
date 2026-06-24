@@ -119,7 +119,7 @@ const emit = defineEmits<{
   'mark-unread': []
   'toggle-star': []
   export: []
-  scroll: [percent: number]
+  scroll: [articleId: string, percent: number]
 }>()
 
 const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()))
@@ -130,11 +130,14 @@ let scrollTimer: ReturnType<typeof setTimeout> | null = null
 const onScroll = () => {
   const el = contentRef.value
   if (!el) return
+  // 在调度时捕获当前文章 id，避免防抖回调在切换文章后把旧位置存到新文章
+  const articleId = props.article?.id
+  if (!articleId) return
   if (scrollTimer) clearTimeout(scrollTimer)
   scrollTimer = setTimeout(() => {
     const max = el.scrollHeight - el.clientHeight
     const percent = max > 0 ? el.scrollTop / max : 0
-    emit('scroll', percent)
+    emit('scroll', articleId, percent)
   }, 500)
 }
 
