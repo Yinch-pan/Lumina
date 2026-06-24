@@ -45,6 +45,31 @@
             <Download class="action-icon" />
             <span>&#23548;&#20986;</span>
           </button>
+          <button class="action-btn" @click="toggleReadingPanel" title="阅读设置">
+            <Type class="action-icon" />
+            <span>Aa</span>
+          </button>
+        </div>
+
+        <div v-if="readingPanelOpen" class="reading-panel">
+          <div class="rp-row">
+            <span class="rp-label">字号</span>
+            <button class="rp-btn" @click="adjustFontSize(-1)">A−</button>
+            <span class="rp-val">{{ readingFontSize }}px</span>
+            <button class="rp-btn" @click="adjustFontSize(1)">A+</button>
+          </div>
+          <div class="rp-row">
+            <span class="rp-label">行高</span>
+            <button class="rp-btn" @click="adjustLineHeight(-0.1)">−</button>
+            <span class="rp-val">{{ readingLineHeight.toFixed(1) }}</span>
+            <button class="rp-btn" @click="adjustLineHeight(0.1)">+</button>
+          </div>
+          <div class="rp-row">
+            <span class="rp-label">宽度</span>
+            <button class="rp-btn" :class="{ active: readingWidth === 680 }" @click="setWidth(680)">窄</button>
+            <button class="rp-btn" :class="{ active: readingWidth === 820 }" @click="setWidth(820)">中</button>
+            <button class="rp-btn" :class="{ active: readingWidth === 960 }" @click="setWidth(960)">宽</button>
+          </div>
         </div>
       </header>
 
@@ -163,7 +188,8 @@ import {
   Languages,
   RotateCw,
   Star,
-  Tag
+  Tag,
+  Type
 } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -217,6 +243,7 @@ const emit = defineEmits<{
     }
   ]
   'delete-highlight': [id: string]
+  'reading-setting': [key: 'reading.fontSize' | 'reading.lineHeight' | 'reading.contentWidth', value: string]
 }>()
 
 const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()))
@@ -227,6 +254,45 @@ const toolbar = ref<{ visible: boolean; x: number; y: number }>({ visible: false
 let pendingSelection: { text: string; prefix: string; suffix: string } | null = null
 
 const allHighlights = computed(() => props.highlights ?? [])
+
+// 快速阅读设置浮层
+const readingPanelOpen = ref(false)
+const readingFontSize = ref(16)
+const readingLineHeight = ref(1.8)
+const readingWidth = ref(820)
+
+const readRootVar = (name: string, fallback: number): number => {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  const n = parseFloat(v)
+  return Number.isFinite(n) ? n : fallback
+}
+
+const toggleReadingPanel = () => {
+  if (!readingPanelOpen.value) {
+    readingFontSize.value = readRootVar('--reading-font-size', 16)
+    readingLineHeight.value = readRootVar('--reading-line-height', 1.8)
+    readingWidth.value = readRootVar('--reading-content-width', 820)
+  }
+  readingPanelOpen.value = !readingPanelOpen.value
+}
+
+const adjustFontSize = (delta: number) => {
+  readingFontSize.value = Math.min(24, Math.max(12, readingFontSize.value + delta))
+  document.documentElement.style.setProperty('--reading-font-size', readingFontSize.value + 'px')
+  emit('reading-setting', 'reading.fontSize', String(readingFontSize.value))
+}
+
+const adjustLineHeight = (delta: number) => {
+  readingLineHeight.value = Math.min(2.2, Math.max(1.4, Math.round((readingLineHeight.value + delta) * 10) / 10))
+  document.documentElement.style.setProperty('--reading-line-height', String(readingLineHeight.value))
+  emit('reading-setting', 'reading.lineHeight', String(readingLineHeight.value))
+}
+
+const setWidth = (w: number) => {
+  readingWidth.value = w
+  document.documentElement.style.setProperty('--reading-content-width', w + 'px')
+  emit('reading-setting', 'reading.contentWidth', String(w))
+}
 
 // 内嵌原文视图（迷你浏览器）
 interface WebviewEl extends HTMLElement {
@@ -376,6 +442,7 @@ let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 const onScroll = () => {
   toolbar.value.visible = false
+  readingPanelOpen.value = false
   const el = contentRef.value
   if (!el) return
   // 在调度时捕获当前文章 id，避免防抖回调在切换文章后把旧位置存到新文章
@@ -400,6 +467,7 @@ watch(
       webUrl.value = ''
     }
     toolbar.value.visible = false
+    readingPanelOpen.value = false
     pendingSelection = null
     window.getSelection()?.removeAllRanges()
     await nextTick()
@@ -434,6 +502,7 @@ watch(
   padding: 24px 32px 20px;
   border-bottom: 1px solid #e4e7ed;
   flex-shrink: 0;
+  position: relative;
 }
 
 .reader-title {
@@ -588,7 +657,7 @@ watch(
 }
 
 .content-section {
-  max-width: 820px;
+  max-width: var(--reading-content-width, 820px);
   margin: 0 auto;
   font-size: var(--reading-font-size, 16px);
   line-height: var(--reading-line-height, 1.8);
@@ -900,4 +969,29 @@ watch(
     opacity: 0;
   }
 }
+
+.reading-panel {
+  position: absolute;
+  right: 32px;
+  top: 96px;
+  z-index: 40;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rp-row { display: flex; align-items: center; gap: 8px; }
+.rp-label { width: 36px; font-size: 13px; color: var(--secondary-text); }
+.rp-btn {
+  min-width: 32px; padding: 4px 8px; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--border-color); background: var(--card-bg);
+  color: var(--text-color); border-radius: 4px;
+}
+.rp-btn:hover { border-color: #409eff; color: #409eff; }
+.rp-btn.active { background: #409eff; color: #fff; border-color: #409eff; }
+.rp-val { min-width: 40px; text-align: center; font-size: 13px; color: var(--text-color); }
 </style>

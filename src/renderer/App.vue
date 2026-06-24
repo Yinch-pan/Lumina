@@ -42,6 +42,7 @@
         @scroll="handleSaveScroll"
         @add-highlight="handleAddHighlight"
         @delete-highlight="handleDeleteHighlight"
+        @reading-setting="handleReadingSetting"
       />
     </div>
 
@@ -322,11 +323,13 @@ const applyReadingSettings = async () => {
   try {
     const fontSize = await window.electronAPI.getSetting('reading.fontSize')
     const lineHeight = await window.electronAPI.getSetting('reading.lineHeight')
+    const contentWidth = await window.electronAPI.getSetting('reading.contentWidth')
     const theme = await window.electronAPI.getSetting('reading.theme')
 
     const root = document.documentElement
     if (fontSize) root.style.setProperty('--reading-font-size', fontSize + 'px')
     if (lineHeight) root.style.setProperty('--reading-line-height', lineHeight)
+    if (contentWidth) root.style.setProperty('--reading-content-width', contentWidth + 'px')
     if (theme) {
       root.setAttribute('data-theme', theme)
     }
@@ -873,6 +876,11 @@ const handleSaveScroll = (articleId: string, percent: number) => {
   window.electronAPI
     .saveScrollPercent(articleId, percent)
     .catch((e) => console.error('Failed to save scroll', e))
+}
+
+const handleReadingSetting = (key: string, value: string) => {
+  if (!window.electronAPI) return
+  window.electronAPI.saveSetting(key, value).catch((e) => console.error('Failed to save reading setting', e))
 }
 
 const loadHighlights = async (articleId: string) => {
