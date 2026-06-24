@@ -21,7 +21,10 @@ export function decryptSecret(stored: string): string {
   if (!stored.startsWith(ENC_PREFIX)) return stored
   try {
     return safeStorage.decryptString(Buffer.from(stored.slice(ENC_PREFIX.length), 'base64'))
-  } catch {
+  } catch (error) {
+    // 解密失败(OS keychain 变更/profile 迁移/数据损坏)。返回空串避免把损坏密文当明文用，
+    // 但记录一条不含密钥内容的日志，让"密钥静默丢失"可观测。
+    console.error('[secureStore] Failed to decrypt stored secret:', error instanceof Error ? error.message : String(error))
     return ''
   }
 }

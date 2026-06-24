@@ -211,7 +211,11 @@ function initializeServices() {
 function migratePlaintextApiKey(repository: Repository): void {
   const stored = repository.getSetting('llm.apiKey')
   if (stored && !isEncrypted(stored)) {
-    repository.setSetting('llm.apiKey', encryptSecret(stored))
+    const encrypted = encryptSecret(stored)
+    // 仅当真正加密成功(safeStorage 可用)时才回写，避免不可用时每次启动重复写入明文。
+    if (isEncrypted(encrypted)) {
+      repository.setSetting('llm.apiKey', encrypted)
+    }
   }
 }
 
