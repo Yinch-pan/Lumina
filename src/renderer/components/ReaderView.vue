@@ -108,6 +108,7 @@
             class="article-content"
             v-html="renderedHtml"
             @mouseup="onTextSelect"
+            @click="onArticleClick"
           ></article>
           <div v-else class="content-fallback">
             <div class="fallback-title">&#27491;&#25991;&#26242;&#26102;&#26080;&#27861;&#26174;&#31034;</div>
@@ -186,11 +187,17 @@
       <BookOpen class="empty-icon" />
       <div class="empty-text">&#36873;&#25321;&#19968;&#31687;&#25991;&#31456;&#24320;&#22987;&#38405;&#35835;</div>
     </div>
+
+    <Teleport to="body">
+      <div v-if="lightboxSrc" class="lightbox-overlay" @click="closeLightbox">
+        <img :src="lightboxSrc" class="lightbox-img" @click.stop />
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onUnmounted, ref, watch } from 'vue'
 import {
   ArrowUp,
   BookOpen,
@@ -272,6 +279,34 @@ const toolbar = ref<{ visible: boolean; x: number; y: number }>({ visible: false
 let pendingSelection: { text: string; prefix: string; suffix: string } | null = null
 
 const allHighlights = computed(() => props.highlights ?? [])
+
+// 正文图片灯箱
+const lightboxSrc = ref<string | null>(null)
+
+const onArticleClick = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (target.tagName === 'IMG') {
+    const src = (target as HTMLImageElement).src
+    if (src) lightboxSrc.value = src
+  }
+}
+
+const closeLightbox = () => {
+  lightboxSrc.value = null
+}
+
+const onLightboxKey = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') closeLightbox()
+}
+
+watch(lightboxSrc, (val) => {
+  if (val) document.addEventListener('keydown', onLightboxKey)
+  else document.removeEventListener('keydown', onLightboxKey)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', onLightboxKey)
+})
 
 // 快速阅读设置浮层
 const readingPanelOpen = ref(false)
@@ -1111,4 +1146,24 @@ watch(
   cursor: pointer;
 }
 .code-copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
+</style>
+
+<style>
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+  cursor: default;
+}
 </style>
