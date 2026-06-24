@@ -33,7 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 模块 C: AI 摘要与翻译
   cleanArticle: (articleId: string) => ipcRenderer.invoke('clean-article', articleId),
-  summarizeArticle: (articleId: string) => ipcRenderer.invoke('summarize-article', articleId),
+  summarizeArticle: (articleId: string, length?: 'short' | 'medium' | 'long') =>
+    ipcRenderer.invoke('summarize-article', articleId, length),
   translateArticle: (articleId: string, targetLang: string) =>
     ipcRenderer.invoke('translate-article', articleId, targetLang),
 

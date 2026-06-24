@@ -687,14 +687,14 @@ const handleExportOpml = async () => {
   }
 }
 
-const handleSummarize = async () => {
+const handleSummarize = async (length: 'short' | 'medium' | 'long' = 'medium') => {
   if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
     alert('请先选择一篇文章')
     return
   }
 
   try {
-    const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value)
+    const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value, length)
     selectedArticleContent.value = { ...selectedArticleContent.value, summary }
   } catch (error) {
     console.error('Failed to summarize article', error)

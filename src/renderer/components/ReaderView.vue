@@ -13,9 +13,17 @@
         </div>
 
         <div class="reader-actions">
-          <button class="action-btn" @click="$emit('summarize')">
+          <button class="action-btn" @click="$emit('summarize', 'short')">
             <FileText class="action-icon" />
-            <span>AI &#25688;&#35201;</span>
+            <span>&#30701;&#25688;&#35201;</span>
+          </button>
+          <button class="action-btn" @click="$emit('summarize', 'medium')">
+            <FileText class="action-icon" />
+            <span>&#20013;&#25688;&#35201;</span>
+          </button>
+          <button class="action-btn" @click="$emit('summarize', 'long')">
+            <FileText class="action-icon" />
+            <span>&#38271;&#25688;&#35201;</span>
           </button>
           <button class="action-btn" @click="$emit('translate')">
             <Languages class="action-icon" />
@@ -86,7 +94,7 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  summarize: []
+  summarize: [length: 'short' | 'medium' | 'long']
   translate: []
   'add-tag': []
   'mark-unread': []

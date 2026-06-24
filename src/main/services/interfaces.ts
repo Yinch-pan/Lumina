@@ -97,7 +97,7 @@ export interface ICleaningService {
  */
 export interface ISummaryService {
   // 生成文章摘要
-  summarize(articleId: string): Promise<string>
+  summarize(articleId: string, length?: 'short' | 'medium' | 'long'): Promise<string>
 }
 
 /**

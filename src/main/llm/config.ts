@@ -25,6 +25,53 @@ export const SummaryPromptTemplate = `你是一个专业的文章摘要助手。
 2. 长度控制在 200 字以内
 3. 使用客观、简洁的语言`
 
+/**
+ * 摘要长度档位
+ */
+export type SummaryLength = 'short' | 'medium' | 'long'
+
+/**
+ * 三档摘要 Prompt 模板
+ * 使用 {variable} 格式进行变量替换
+ */
+export const SummaryPromptTemplates: Record<SummaryLength, string> = {
+  short: `你是一个专业的文章摘要助手。请对以下文章生成极简中文摘要。
+
+文章标题：{title}
+文章内容：
+{content}
+
+要求：
+1. 用 2-3 句话概括核心观点
+2. 长度控制在 80 字以内
+3. 客观简洁`,
+  medium: `你是一个专业的文章摘要助手。请对以下文章内容生成简洁、准确的中文摘要。
+
+文章标题：{title}
+文章内容：
+{content}
+
+要求：
+1. 摘要应包含文章的核心观点和关键信息
+2. 长度控制在 200 字以内
+3. 使用客观、简洁的语言`,
+  long: `你是一个专业的文章摘要助手。请对以下文章生成详细中文摘要。
+
+文章标题：{title}
+文章内容：
+{content}
+
+要求：
+1. 分点梳理文章主旨、论据和结论
+2. 长度 300-500 字
+3. 保留关键细节，使用客观语言`,
+}
+
+/**
+ * 各档位摘要的最大生成 token 数
+ */
+export const SummaryMaxTokens: Record<SummaryLength, number> = { short: 256, medium: 512, long: 1024 }
+
 export const TranslationPromptTemplate = `你是一个专业翻译助手。请将以下文章翻译为{targetLang}，保留 Markdown 结构和链接。
 
 文章标题：{title}

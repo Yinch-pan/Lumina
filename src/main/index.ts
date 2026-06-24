@@ -185,8 +185,8 @@ function registerIpcHandlers() {
   ipcMain.handle('clean-article', async (_event, articleId: string) =>
     cloneForIpc(await getArticleService().getArticleContent(articleId))
   )
-  ipcMain.handle('summarize-article', async (_event, articleId: string) =>
-    cloneForIpc(await getSummaryService().summarize(articleId))
+  ipcMain.handle('summarize-article', async (_event, articleId: string, length?: 'short' | 'medium' | 'long') =>
+    cloneForIpc(await getSummaryService().summarize(articleId, length))
   )
   ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) =>
     cloneForIpc(await getTranslationService().translate(articleId, targetLang))

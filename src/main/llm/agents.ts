@@ -5,7 +5,7 @@
 
 import type { LLMProvider, LLMResponse, Message, ChatOptions } from './provider'
 import type { LLMProviderConfig } from './config'
-import { renderPrompt, SummaryPromptTemplate, TranslationPromptTemplate } from './config'
+import { renderPrompt, SummaryPromptTemplates, SummaryMaxTokens, type SummaryLength, TranslationPromptTemplate } from './config'
 import { OpenAICompatibleProvider } from './provider'
 
 /**
@@ -18,6 +18,8 @@ export interface SummaryOptions {
   temperature?: number
   /** 最大生成 token 数 */
   maxTokens?: number
+  /** 摘要长度档位：short / medium / long，默认 medium */
+  length?: SummaryLength
 }
 
 /**
@@ -66,8 +68,9 @@ export class SummaryAgent {
     }
 
     let prompt: string
+    const length: SummaryLength = options?.length ?? 'medium'
     try {
-      prompt = renderPrompt(SummaryPromptTemplate, {
+      prompt = renderPrompt(SummaryPromptTemplates[length], {
         title: options?.title ?? 'Untitled',
         content: markdown,
       })
@@ -79,7 +82,7 @@ export class SummaryAgent {
 
     const chatOptions: ChatOptions = {
       temperature: options?.temperature,
-      maxTokens: options?.maxTokens,
+      maxTokens: options?.maxTokens ?? SummaryMaxTokens[length],
     }
 
     try {
@@ -101,8 +104,9 @@ export class SummaryAgent {
     }
 
     let prompt: string
+    const length: SummaryLength = options?.length ?? 'medium'
     try {
-      prompt = renderPrompt(SummaryPromptTemplate, {
+      prompt = renderPrompt(SummaryPromptTemplates[length], {
         title: options?.title ?? 'Untitled',
         content: markdown,
       })
@@ -114,7 +118,7 @@ export class SummaryAgent {
 
     const chatOptions: ChatOptions = {
       temperature: options?.temperature,
-      maxTokens: options?.maxTokens,
+      maxTokens: options?.maxTokens ?? SummaryMaxTokens[length],
     }
 
     yield* this.provider.streamChat(messages, chatOptions)

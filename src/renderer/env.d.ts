@@ -32,7 +32,7 @@ declare global {
 
       // 模块 C: AI 功能
       cleanArticle: (articleId: string) => Promise<ArticleContent>
-      summarizeArticle: (articleId: string) => Promise<string>
+      summarizeArticle: (articleId: string, length?: 'short' | 'medium' | 'long') => Promise<string>
       translateArticle: (articleId: string, targetLang: string) => Promise<string>
 
       // 模块 D: 标签管理

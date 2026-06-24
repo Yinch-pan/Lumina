@@ -10,7 +10,7 @@ export class SummaryService implements ISummaryService {
     private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
   ) {}
 
-  async summarize(articleId: string): Promise<string> {
+  async summarize(articleId: string, length: 'short' | 'medium' | 'long' = 'medium'): Promise<string> {
     if (!articleId.trim()) {
       throw new Error('Article ID cannot be empty')
     }
@@ -30,7 +30,7 @@ export class SummaryService implements ISummaryService {
     try {
       const config = await this.getConfig()
       const agent = new SummaryAgent(config)
-      const response = await agent.summarizeWithUsage(markdown, { title: content.title })
+      const response = await agent.summarizeWithUsage(markdown, { title: content.title, length })
       const summary = response.content
       this.repository.createAgentRun({
         id: runId,
