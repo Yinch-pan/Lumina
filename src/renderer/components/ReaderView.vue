@@ -13,23 +13,34 @@
         </div>
 
         <div class="reader-actions">
-          <button class="action-btn" @click="$emit('summarize')">
+          <button class="action-btn" @click.stop="$emit('summarize')">
             <FileText class="action-icon" />
             <span>AI &#25688;&#35201;</span>
           </button>
-          <button class="action-btn" @click="$emit('translate')">
-            <Languages class="action-icon" />
-            <span>AI &#32763;&#35793;</span>
-          </button>
-          <button class="action-btn" @click="$emit('add-tag')">
+          <div class="translate-group">
+            <button class="action-btn" @click.stop="$emit('translate', selectedLang)">
+              <Languages class="action-icon" />
+              <span>AI &#32763;&#35793;</span>
+            </button>
+            <select class="lang-select" v-model="selectedLang" @click.stop>
+              <option value="中文">中文</option>
+              <option value="English">English</option>
+              <option value="日本語">日本語</option>
+              <option value="한국어">한국어</option>
+              <option value="Français">Français</option>
+              <option value="Deutsch">Deutsch</option>
+              <option value="Español">Español</option>
+            </select>
+          </div>
+          <button class="action-btn" @click.stop="$emit('add-tag')">
             <Tag class="action-icon" />
             <span>&#28155;&#21152;&#26631;&#31614;</span>
           </button>
-          <button class="action-btn" @click="$emit('mark-unread')">
+          <button class="action-btn" @click.stop="$emit('mark-unread')">
             <Circle class="action-icon" />
             <span>&#26631;&#35760;&#26410;&#35835;</span>
           </button>
-          <button class="action-btn" @click="$emit('export')">
+          <button class="action-btn" @click.stop="$emit('export')">
             <Download class="action-icon" />
             <span>&#23548;&#20986;</span>
           </button>
@@ -38,14 +49,48 @@
 
       <main class="reader-content">
         <div class="content-section">
-          <section v-if="article.summary" class="ai-section">
-            <div class="ai-section-title">AI &#25688;&#35201;</div>
-            <div class="ai-content">{{ article.summary }}</div>
+          <!-- AI 摘要区域 -->
+          <section v-if="article.summary || isSummarizing" class="ai-section">
+            <div class="ai-section-header">
+              <div class="ai-section-title">AI &#25688;&#35201;</div>
+              <button v-if="article.summary && !isSummarizing" class="regenerate-btn" @click.stop="$emit('summarize')">
+                &#128260; &#37325;&#26032;&#29983;&#25104;
+              </button>
+            </div>
+            <div v-if="isSummarizing" class="ai-loading">
+              <div class="loading-spinner"></div>
+              <span v-if="aiProgress && aiProgress.type === 'summary'">
+                &#37325;&#35797;&#20013; ({{ aiProgress.attempt }}/{{ aiProgress.maxAttempts }})
+                <span v-if="aiProgress.error" class="retry-error">: {{ aiProgress.error }}</span>
+              </span>
+              <span v-else>&#27491;&#22312;&#29983;&#25104;&#25688;&#35201;...</span>
+            </div>
+            <div v-if="streamingContent && streamingContent.type === 'summary'" class="ai-content streaming">
+              {{ streamingContent.content }}<span class="cursor">|</span>
+            </div>
+            <div v-else-if="!isSummarizing" class="ai-content">{{ article.summary }}</div>
           </section>
 
-          <section v-if="article.translation" class="ai-section">
-            <div class="ai-section-title">AI &#32763;&#35793;</div>
-            <div class="ai-content">{{ article.translation }}</div>
+          <!-- AI 翻译区域 -->
+          <section v-if="article.translation || isTranslating" class="ai-section">
+            <div class="ai-section-header">
+              <div class="ai-section-title">AI &#32763;&#35793;</div>
+              <button v-if="article.translation && !isTranslating" class="regenerate-btn" @click.stop="$emit('translate', selectedLang)">
+                &#128260; &#37325;&#26032;&#29983;&#25104;
+              </button>
+            </div>
+            <div v-if="isTranslating" class="ai-loading">
+              <div class="loading-spinner"></div>
+              <span v-if="aiProgress && aiProgress.type === 'translation'">
+                &#37325;&#35797;&#20013; ({{ aiProgress.attempt }}/{{ aiProgress.maxAttempts }})
+                <span v-if="aiProgress.error" class="retry-error">: {{ aiProgress.error }}</span>
+              </span>
+              <span v-else>&#27491;&#22312;&#29983;&#25104;&#32763;&#35793;...</span>
+            </div>
+            <div v-if="streamingContent && streamingContent.type === 'translation'" class="ai-content streaming">
+              {{ streamingContent.content }}<span class="cursor">|</span>
+            </div>
+            <div v-else-if="!isTranslating" class="ai-content">{{ article.translation }}</div>
           </section>
 
           <article v-if="hasCleanedHtml" class="article-content" v-html="article.cleanedHtml"></article>
@@ -68,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { BookOpen, Circle, Download, FileText, Languages, Tag } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -83,15 +128,21 @@ const props = defineProps<{
     translation?: string
     tags: string[]
   } | null
+  isSummarizing?: boolean
+  isTranslating?: boolean
+  aiProgress?: { type: string; attempt: number; maxAttempts: number; error?: string } | null
+  streamingContent?: { type: string; content: string } | null
 }>()
 
 defineEmits<{
   summarize: []
-  translate: []
+  translate: [targetLang: string]
   'add-tag': []
   'mark-unread': []
   export: []
 }>()
+
+const selectedLang = ref('中文')
 
 const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()))
 </script>
@@ -186,6 +237,33 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
   flex-shrink: 0;
 }
 
+.translate-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lang-select {
+  min-height: 32px;
+  padding: 7px 8px;
+  border: 1px solid #dcdfe6;
+  background: #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #4b5563;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+}
+
+.lang-select:hover {
+  border-color: #409eff;
+  color: #2563eb;
+  background: #f8fbff;
+}
+
 .reader-content {
   flex: 1;
   overflow-y: auto;
@@ -208,11 +286,74 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
   border-radius: 4px;
 }
 
+.ai-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .ai-section-title {
   font-size: 14px;
   font-weight: 650;
   color: #2563eb;
-  margin-bottom: 10px;
+}
+
+.ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.retry-error {
+  color: #f56c6c;
+  font-size: 12px;
+}
+
+.ai-content.streaming {
+  min-height: 60px;
+}
+
+.cursor {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.regenerate-btn {
+  font-size: 12px;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.regenerate-btn:hover {
+  background: #eff6ff;
 }
 
 .ai-content {

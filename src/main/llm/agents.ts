@@ -156,4 +156,22 @@ export class TranslationAgent {
     }
     return await this.provider.chat(messages, chatOptions)
   }
+
+  async *translateStream(markdown: string, targetLang: string, options?: TranslationOptions): AsyncIterable<string> {
+    if (!markdown || markdown.trim() === '') {
+      throw new Error('Markdown content cannot be empty')
+    }
+
+    const prompt = renderPrompt(TranslationPromptTemplate, {
+      title: options?.title ?? 'Untitled',
+      targetLang,
+      content: markdown
+    })
+    const messages: Message[] = [{ role: 'user', content: prompt }]
+    const chatOptions: ChatOptions = {
+      temperature: options?.temperature,
+      maxTokens: options?.maxTokens
+    }
+    yield* this.provider.streamChat(messages, chatOptions)
+  }
 }

@@ -98,7 +98,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
         messages: this.toOpenAIMessages(messages),
         temperature: options?.temperature,
         max_tokens: options?.maxTokens,
-      })
+        // 禁用思考模式（DeepSeek 默认开启，ECNU 默认关闭）
+        thinking: { type: 'disabled' },
+      } as any)
 
       const choice = response.choices[0]
       return {
@@ -129,9 +131,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
         temperature: options?.temperature,
         max_tokens: options?.maxTokens,
         stream: true,
-      })
+        // 禁用思考模式（DeepSeek 默认开启，ECNU 默认关闭）
+        thinking: { type: 'disabled' },
+      } as any) as unknown as AsyncIterable<any>
 
       for await (const chunk of stream) {
+        // 忽略 reasoning_content（思考模式输出），只返回 content
         const delta = chunk.choices[0]?.delta?.content
         if (delta) {
           yield delta
@@ -139,6 +144,35 @@ export class OpenAICompatibleProvider implements LLMProvider {
       }
     } catch (error) {
       throw this.handleError(error)
+    }
+  }
+
+  /**
+   * 获取可用模型列表
+   * 调用 GET /models 端点，返回模型 ID 列表
+   * 支持所有 OpenAI 兼容 API（OpenAI、DeepSeek、ECNU 等）
+   */
+  static async listModels(config: Pick<LLMProviderConfig, 'baseUrl' | 'apiKey'>): Promise<string[]> {
+    try {
+      const client = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.baseUrl,
+        timeout: 30_000,
+      })
+
+      const response = await client.models.list()
+      return response.data
+        .map((model) => model.id)
+        .sort()
+    } catch (error) {
+      if (error instanceof OpenAI.APIError) {
+        const status = error.status
+        if (status === 401 || status === 403) {
+          throw new Error(`认证失败 (${status})：API Key 无效或权限不足`)
+        }
+        throw new Error(`获取模型列表失败 (${status})：${error.message}`)
+      }
+      throw new Error(`获取模型列表失败：${error instanceof Error ? error.message : String(error)}`)
     }
   }
 

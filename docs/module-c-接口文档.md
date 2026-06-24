@@ -425,6 +425,61 @@ try {
 | 日期 | 版本 | 说明 |
 |------|------|------|
 | 2026-06-01 | 1.0 | 第二周完成，SummaryService 可用 |
+| 2026-06-05 | 2.0 | 第三周完成，TranslationService 可用，真实 API 测试通过 |
+
+---
+
+## 真实 API 测试报告
+
+**测试时间**：2026-06-05
+**测试环境**：ECNU API (https://chat.ecnu.edu.cn/open/api/v1)
+**测试模型**：ecnu-plus (Qwen3.6-27B)
+
+### 测试结果
+
+| 测试项 | 状态 | 说明 |
+|--------|------|------|
+| Provider 创建 | ✅ 通过 | OpenAICompatibleProvider 正常初始化 |
+| 非流式调用 | ✅ 通过 | 返回完整响应，Token 用量统计正常 |
+| 流式调用 | ✅ 通过 | 逐块返回内容，无错误 |
+| SummaryAgent | ✅ 通过 | 摘要生成成功，内容准确 |
+| TranslationAgent | ✅ 通过 | 翻译生成成功，翻译质量良好 |
+
+### 测试详情
+
+**1. 非流式调用**
+- 输入：`"你好，请简单介绍一下自己。"`
+- 输出：通义千问自我介绍
+- Token 用量：promptTokens: 19, completionTokens: 76
+
+**2. 流式调用**
+- 输入：`"用一句话介绍 RSS 阅读器。"`
+- 输出：RSS 阅读器定义
+- 流式传输正常，无延迟问题
+
+**3. SummaryAgent**
+- 输入：Mercury RSS 阅读器介绍（约 300 字）
+- 输出：高质量中文摘要（约 150 字）
+- 摘要准确捕捉了核心功能和技术栈
+
+**4. TranslationAgent**
+- 输入：Mercury RSS 阅读器介绍
+- 输出：英文翻译
+- 翻译准确，专业术语处理得当
+
+### API 配置
+
+```json
+{
+  "baseUrl": "https://chat.ecnu.edu.cn/open/api/v1",
+  "apiKey": "your-api-key-here",
+  "model": "ecnu-plus"
+}
+```
+
+### 结论
+
+所有功能测试通过，API 调用稳定可靠。摘要和翻译质量满足预期要求。
 
 ---
 

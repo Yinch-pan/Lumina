@@ -609,6 +609,105 @@ export class Repository {
 
     return row?.output_text ?? undefined
   }
+
+  getLLMUsageStats(): {
+    totalCalls: number
+    totalTokens: number
+    summaryCalls: number
+    translationCalls: number
+    byModel: Array<{ model: string; calls: number; tokens: number }>
+  } {
+    const totalRow = this.db
+      .prepare(
+        `SELECT COUNT(*) as calls, COALESCE(SUM(total_tokens), 0) as tokens
+         FROM llm_usage`
+      )
+      .get() as { calls: number; tokens: number }
+
+    const summaryRow = this.db
+      .prepare(
+        `SELECT COUNT(*) as calls
+         FROM agent_runs
+         WHERE agent_type = 'summary' AND status = 'completed'`
+      )
+      .get() as { calls: number }
+
+    const translationRow = this.db
+      .prepare(
+        `SELECT COUNT(*) as calls
+         FROM agent_runs
+         WHERE agent_type = 'translation' AND status = 'completed'`
+      )
+      .get() as { calls: number }
+
+    const byModel = this.db
+      .prepare(
+        `SELECT model, COUNT(*) as calls, COALESCE(SUM(total_tokens), 0) as tokens
+         FROM llm_usage
+         GROUP BY model
+         ORDER BY calls DESC`
+      )
+      .all() as Array<{ model: string; calls: number; tokens: number }>
+
+    return {
+      totalCalls: totalRow.calls,
+      totalTokens: totalRow.tokens,
+      summaryCalls: summaryRow.calls,
+      translationCalls: translationRow.calls,
+      byModel
+    }
+  }
+
+  getAgentRunHistory(limit: number = 50): Array<{
+    id: string
+    entryId: string
+    entryTitle: string
+    agentType: string
+    status: string
+    errorMessage: string | null
+    startedAt: number
+    completedAt: number | null
+    duration: number | null
+  }> {
+    const rows = this.db
+      .prepare(
+        `SELECT 
+          ar.id,
+          ar.entry_id,
+          e.title as entry_title,
+          ar.agent_type,
+          ar.status,
+          ar.error_message,
+          ar.started_at,
+          ar.completed_at
+        FROM agent_runs ar
+        LEFT JOIN entries e ON e.id = ar.entry_id
+        ORDER BY ar.started_at DESC
+        LIMIT ?`
+      )
+      .all(limit) as Array<{
+        id: string
+        entry_id: string
+        entry_title: string | null
+        agent_type: string
+        status: string
+        error_message: string | null
+        started_at: number
+        completed_at: number | null
+      }>
+
+    return rows.map(row => ({
+      id: row.id,
+      entryId: row.entry_id,
+      entryTitle: row.entry_title || 'Unknown',
+      agentType: row.agent_type,
+      status: row.status,
+      errorMessage: row.error_message,
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
+      duration: row.completed_at ? row.completed_at - row.started_at : null
+    }))
+  }
 }
 
 function normalizeNullableTitle(value?: string | null): string | null {

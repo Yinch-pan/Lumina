@@ -22,7 +22,13 @@
     "type": "git",
     "url": "git+https://github.com/Yinch-pan/Mercury.git"
   },
-  "keywords": ["rss", "reader", "electron", "ai", "markdown"],
+  "keywords": [
+    "rss",
+    "reader",
+    "electron",
+    "ai",
+    "markdown"
+  ],
   "author": "Mercury Team",
   "license": "ISC",
   "bugs": {
@@ -36,7 +42,7 @@
       "output": "release"
     },
     "files": [
-    "dist/**/*",
+      "dist/**/*",
       "package.json"
     ],
     "extraResources": [],
@@ -44,11 +50,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-        "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico",
@@ -65,7 +75,10 @@
       "artifactName": "${productName}-${version}-Portable.${ext}"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.icns",
       "category": "public.app-category.news",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
@@ -73,7 +86,7 @@
     "dmg": {
       "contents": [
         {
-       "x": 130,
+          "x": 130,
           "y": 220
         },
         {
@@ -82,13 +95,16 @@
           "type": "link",
           "path": "/Applications"
         }
-    ]
+      ]
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "build/icon.png",
       "category": "Network",
-    "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
   },
   "devDependencies": {
@@ -116,6 +132,6 @@
     "openai": "^4.0.0",
     "rss-parser": "^3.13.0",
     "sanitize-html": "^2.17.4",
-  "turndown": "^7.2.4"
+    "turndown": "^7.2.4"
   }
 }

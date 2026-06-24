@@ -37,20 +37,36 @@
 
         <div class="form-group">
         <label class="form-label">Model</label>
-          <input
-        type="text"
-            class="form-input"
-            placeholder="gpt-4"
-            v-model="llmConfig.model"
-        />
-        <div class="form-hint">例如：gpt-4, gpt-3.5-turbo, claude-3-opus</div>
+          <div class="model-input-row">
+            <select
+              v-if="availableModels.length > 0"
+              class="form-select model-select"
+              v-model="llmConfig.model"
+              @change="onModelChange"
+            >
+              <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
+            </select>
+            <input
+              v-else
+              type="text"
+              class="form-input model-input"
+              placeholder="点击右侧按钮获取模型列表"
+              v-model="llmConfig.model"
+              @blur="onModelChange"
+            />
+            <button
+              class="btn-secondary"
+              :disabled="isLoadingModels"
+              @click="fetchModels"
+            >
+              {{ isLoadingModels ? '获取中...' : '获取模型列表' }}
+            </button>
+          </div>
+          <div class="form-hint">点击"获取模型列表"自动填充，或手动输入模型名称后失焦保存</div>
+          <div v-if="modelError" class="form-error">{{ modelError }}</div>
+          <div v-if="statusMessage" class="form-hint">{{ statusMessage }}</div>
         </div>
-
-        <button class="btn-primary" :disabled="isSaving" @click="saveLLMConfig">保存 LLM 配置</button>
-        <div v-if="statusMessage" class="form-hint">{{ statusMessage }}</div>
       </div>
-
-      <!-- 阅读设置 -->
       <div class="settings-section">
         <h2 class="section-title">📖 阅读设置</h2>
 
@@ -84,7 +100,70 @@
         <button class="btn-primary" :disabled="isSaving" @click="saveReadingSettings">保存阅读设置</button>
       </div>
 
-    <!-- 应用信息 -->
+      <!-- LLM 用量统计 -->
+      <div class="settings-section">
+        <h2 class="section-title">📊 AI 用量统计</h2>
+        <div class="section-description">
+          查看 AI 摘要和翻译的使用情况
+        </div>
+
+        <div class="usage-stats">
+          <div class="stat-item">
+            <span class="stat-label">总调用次数</span>
+            <span class="stat-value">{{ usageStats.totalCalls }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">总 Token 数</span>
+            <span class="stat-value">{{ usageStats.totalTokens.toLocaleString() }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">摘要次数</span>
+            <span class="stat-value">{{ usageStats.summaryCalls }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">翻译次数</span>
+            <span class="stat-value">{{ usageStats.translationCalls }}</span>
+          </div>
+        </div>
+
+        <div v-if="usageStats.byModel.length > 0" class="model-stats">
+          <h3 class="subsection-title">按模型统计</h3>
+          <div v-for="model in usageStats.byModel" :key="model.model" class="model-item">
+            <span class="model-name">{{ model.model }}</span>
+            <span class="model-stats-text">{{ model.calls }} 次调用, {{ model.tokens.toLocaleString() }} tokens</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 任务历史 -->
+      <div class="settings-section">
+        <h2 class="section-title">📜 任务历史</h2>
+        <div class="section-description">
+          最近的 AI 任务执行记录
+        </div>
+
+        <div v-if="agentRunHistory.length === 0" class="empty-history">
+          暂无任务记录
+        </div>
+        <div v-else class="history-list">
+          <div v-for="run in agentRunHistory" :key="run.id" class="history-item" :class="run.status">
+            <div class="history-header">
+              <span class="history-type">{{ run.agentType === 'summary' ? '摘要' : '翻译' }}</span>
+              <span class="history-status" :class="run.status">
+                {{ run.status === 'completed' ? '成功' : '失败' }}
+              </span>
+            </div>
+            <div class="history-title">{{ run.entryTitle }}</div>
+            <div class="history-meta">
+              <span class="history-time">{{ formatTime(run.startedAt) }}</span>
+              <span v-if="run.duration" class="history-duration">{{ formatDuration(run.duration) }}</span>
+            </div>
+            <div v-if="run.errorMessage" class="history-error">{{ run.errorMessage }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 应用信息 -->
       <div class="settings-section">
       <h2 class="section-title">ℹ️ 关于 Mercury</h2>
         <div class="info-item">
@@ -128,6 +207,29 @@ const readingSettings = ref({
 
 const isSaving = ref(false)
 const statusMessage = ref('')
+const isLoadingModels = ref(false)
+const modelError = ref('')
+const availableModels = ref<string[]>([])
+
+const usageStats = ref({
+  totalCalls: 0,
+  totalTokens: 0,
+  summaryCalls: 0,
+  translationCalls: 0,
+  byModel: [] as Array<{ model: string; calls: number; tokens: number }>
+})
+
+const agentRunHistory = ref<Array<{
+  id: string
+  entryId: string
+  entryTitle: string
+  agentType: string
+  status: string
+  errorMessage: string | null
+  startedAt: number
+  completedAt: number | null
+  duration: number | null
+}>>([])
 
 onMounted(async () => {
   if (!window.electronAPI) {
@@ -151,6 +253,14 @@ onMounted(async () => {
     if (fontSize) readingSettings.value.fontSize = fontSize
     if (lineHeight) readingSettings.value.lineHeight = lineHeight
     if (theme) readingSettings.value.theme = theme
+
+    // 加载 LLM 用量统计
+    const stats = await window.electronAPI.getLLMUsageStats()
+    usageStats.value = stats
+
+    // 加载任务历史
+    const history = await window.electronAPI.getAgentRunHistory(20)
+    agentRunHistory.value = history
   } catch (error) {
     console.error('Failed to load settings', error)
   }
@@ -158,7 +268,6 @@ onMounted(async () => {
 
 const saveLLMConfig = async () => {
   if (!window.electronAPI) {
-    alert('当前环境不支持保存设置')
     return
   }
 
@@ -170,12 +279,51 @@ const saveLLMConfig = async () => {
       apiKey: llmConfig.value.apiKey,
       model: llmConfig.value.model
     })
-    statusMessage.value = 'LLM 配置已保存'
+    statusMessage.value = '已保存'
   } catch (error) {
     console.error('Failed to save LLM config', error)
     statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
   } finally {
     isSaving.value = false
+  }
+}
+
+const onModelChange = async () => {
+  await saveLLMConfig()
+}
+
+const fetchModels = async () => {
+  if (!window.electronAPI) {
+    modelError.value = '当前环境不支持获取模型列表'
+    return
+  }
+
+  isLoadingModels.value = true
+  modelError.value = ''
+  statusMessage.value = ''
+  try {
+    // 先保存 baseUrl 和 apiKey
+    await window.electronAPI.saveLLMConfig({
+      baseUrl: llmConfig.value.baseUrl,
+      apiKey: llmConfig.value.apiKey,
+      model: llmConfig.value.model
+    })
+    // 获取模型列表
+    const models = await window.electronAPI.fetchLLMModels()
+    availableModels.value = models
+    // 选择第一个模型并保存
+    llmConfig.value.model = models.length > 0 ? models[0] : ''
+    await window.electronAPI.saveLLMConfig({
+      baseUrl: llmConfig.value.baseUrl,
+      apiKey: llmConfig.value.apiKey,
+      model: llmConfig.value.model
+    })
+    statusMessage.value = '已保存'
+  } catch (error) {
+    console.error('Failed to fetch models', error)
+    modelError.value = `获取失败：${error instanceof Error ? error.message : String(error)}`
+  } finally {
+    isLoadingModels.value = false
   }
 }
 
@@ -199,6 +347,30 @@ const saveReadingSettings = async () => {
   } finally {
     isSaving.value = false
   }
+}
+
+const formatTime = (timestamp: number) => {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)} 天前`
+
+  return date.toLocaleDateString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric'
+  })
+}
+
+const formatDuration = (ms: number) => {
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 </script>
 
@@ -312,6 +484,47 @@ const saveReadingSettings = async () => {
   margin-top: 6px;
 }
 
+.form-error {
+  font-size: 12px;
+  color: #f56c6c;
+  margin-top: 6px;
+}
+
+.model-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-select,
+.model-input {
+  flex: 1;
+}
+
+.btn-secondary {
+  padding: 10px 16px;
+  background: #ffffff;
+  color: #409eff;
+  border: 1px solid #409eff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover {
+  background: #ecf5ff;
+}
+
+.btn-secondary:disabled {
+  color: #c0c4cc;
+  border-color: #e4e7ed;
+  cursor: not-allowed;
+  background: #ffffff;
+}
+
 .btn-primary {
   padding: 10px 20px;
   background: #409eff;
@@ -359,5 +572,148 @@ const saveReadingSettings = async () => {
 
 .info-link:hover {
   text-decoration: underline;
+}
+
+.usage-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.model-stats {
+  margin-top: 16px;
+}
+
+.subsection-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.model-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.model-item:last-child {
+  border-bottom: none;
+}
+
+.model-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.model-stats-text {
+  font-size: 14px;
+  color: #606266;
+}
+
+.empty-history {
+  text-align: center;
+  color: #909399;
+  padding: 24px;
+  font-size: 14px;
+}
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 12px;
+  border-bottom: 1px solid #e4e7ed;
+  background: var(--card-bg);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.history-item:last-child {
+  margin-bottom: 0;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.history-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.history-status {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.history-status.completed {
+  color: #67c23a;
+  background: #f0f9eb;
+}
+
+.history-status.failed {
+  color: #f56c6c;
+  background: #fef0f0;
+}
+
+.history-title {
+  font-size: 14px;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.history-error {
+  font-size: 12px;
+  color: #f56c6c;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #fef0f0;
+  border-radius: 2px;
 }
 </style>

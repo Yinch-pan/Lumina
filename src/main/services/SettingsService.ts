@@ -1,4 +1,5 @@
 import { Repository } from '../database/repository'
+import { OpenAICompatibleProvider } from '../llm/provider'
 import { LLMConfig } from '../types'
 import { ISettingsService } from './interfaces'
 
@@ -39,5 +40,40 @@ export class SettingsService implements ISettingsService {
 
   async saveSetting(key: string, value: string): Promise<void> {
     this.repository.setSetting(key, value)
+  }
+
+  async getLLMUsageStats(): Promise<{
+    totalCalls: number
+    totalTokens: number
+    summaryCalls: number
+    translationCalls: number
+    byModel: Array<{ model: string; calls: number; tokens: number }>
+  }> {
+    return this.repository.getLLMUsageStats()
+  }
+
+  async fetchModels(): Promise<string[]> {
+    const config = await this.getLLMConfig()
+    if (!config.apiKey) {
+      throw new Error('请先填写 API Key')
+    }
+    return OpenAICompatibleProvider.listModels({
+      baseUrl: config.baseUrl,
+      apiKey: config.apiKey,
+    })
+  }
+
+  async getAgentRunHistory(limit: number = 50): Promise<Array<{
+    id: string
+    entryId: string
+    entryTitle: string
+    agentType: string
+    status: string
+    errorMessage: string | null
+    startedAt: number
+    completedAt: number | null
+    duration: number | null
+  }>> {
+    return this.repository.getAgentRunHistory(limit)
   }
 }

@@ -26,6 +26,10 @@
       />
       <ReaderView
         :article="selectedArticle"
+        :isSummarizing="isSummarizing"
+        :isTranslating="isTranslating"
+        :aiProgress="aiProgress"
+        :streamingContent="streamingContent"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -74,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import TitleBar from './components/TitleBar.vue'
 import FeedSidebar from './components/FeedSidebar.vue'
 import ArticleList from './components/ArticleList.vue'
@@ -192,6 +196,13 @@ const opmlFilePath = ref('')
 const opmlPreviewFeeds = ref<OpmlFeed[]>([])
 const opmlImportProgress = ref<OpmlImportProgressItem[]>([])
 
+const isSummarizing = ref(false)
+const isTranslating = ref(false)
+const aiProgress = ref<{ type: string; attempt: number; maxAttempts: number; error?: string } | null>(null)
+const streamingContent = ref<{ type: string; content: string; articleId: string } | null>(null)
+let removeAIProgressListener: (() => void) | null = null
+let removeAIChunkListener: (() => void) | null = null
+
 const articles = computed(() => {
   let filteredArticles = articleList.value
 
@@ -218,6 +229,31 @@ onMounted(() => {
   void loadFeeds()
   void loadTags()
   void applyReadingSettings()
+
+  // 监听 AI 进度更新
+  if (window.electronAPI?.onAIProgress) {
+    removeAIProgressListener = window.electronAPI.onAIProgress((data) => {
+      aiProgress.value = data
+    })
+  }
+
+  // 监听 AI 流式内容
+  if (window.electronAPI?.onAIChunk) {
+    removeAIChunkListener = window.electronAPI.onAIChunk((data) => {
+      // 如果没有流式内容或文章不匹配，忽略
+      if (!streamingContent.value || streamingContent.value.articleId !== selectedArticleId.value) {
+        return
+      }
+      if (streamingContent.value.type === data.type) {
+        streamingContent.value.content += data.chunk
+      }
+    })
+  }
+})
+
+onUnmounted(() => {
+  removeAIProgressListener?.()
+  removeAIChunkListener?.()
 })
 
 const loadFeeds = async () => {
@@ -292,6 +328,13 @@ const handleSelectFeed = async (feedId: string) => {
   selectedFeedId.value = feedId
   selectedArticleId.value = ''
   selectedArticleContent.value = null
+  
+  // 重置 AI 状态
+  isSummarizing.value = false
+  isTranslating.value = false
+  aiProgress.value = null
+  streamingContent.value = null
+
   await loadArticles(feedId)
 }
 
@@ -301,6 +344,13 @@ const handleSelectTag = (tagName: string) => {
 
 const handleSelectArticle = async (articleId: string) => {
   selectedArticleId.value = articleId
+  
+  // 重置 AI 状态
+  isSummarizing.value = false
+  isTranslating.value = false
+  aiProgress.value = null
+  streamingContent.value = null
+
   if (!window.electronAPI || useMockData.value) {
     selectedArticleContent.value = mockArticleContent
     return
@@ -674,32 +724,55 @@ const handleSummarize = async () => {
     return
   }
 
+  const articleId = selectedArticleId.value
+  isSummarizing.value = true
+  aiProgress.value = null
+  streamingContent.value = { type: 'summary', content: '', articleId }
   try {
-    const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value)
-    selectedArticleContent.value = { ...selectedArticleContent.value, summary }
+    const summary = await window.electronAPI.summarizeArticleStream(articleId)
+    if (selectedArticleId.value === articleId) {
+      selectedArticleContent.value = { ...selectedArticleContent.value, summary }
+    }
   } catch (error) {
     console.error('Failed to summarize article', error)
-    alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
+    if (selectedArticleId.value === articleId) {
+      alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  } finally {
+    if (selectedArticleId.value === articleId) {
+      isSummarizing.value = false
+      aiProgress.value = null
+      streamingContent.value = null
+    }
   }
 }
 
-const handleTranslate = async () => {
+const handleTranslate = async (targetLang: string = '中文') => {
   if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
     alert('请先选择一篇文章')
     return
   }
 
-  const targetLang = prompt('请输入目标语言', '中文')
-  if (!targetLang) {
-    return
-  }
-
+  const articleId = selectedArticleId.value
+  isTranslating.value = true
+  aiProgress.value = null
+  streamingContent.value = { type: 'translation', content: '', articleId }
   try {
-    const translation = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
-    selectedArticleContent.value = { ...selectedArticleContent.value, translation }
+    const translation = await window.electronAPI.translateArticleStream(articleId, targetLang)
+    if (selectedArticleId.value === articleId) {
+      selectedArticleContent.value = { ...selectedArticleContent.value, translation }
+    }
   } catch (error) {
     console.error('Failed to translate article', error)
-    alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
+    if (selectedArticleId.value === articleId) {
+      alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  } finally {
+    if (selectedArticleId.value === articleId) {
+      isTranslating.value = false
+      aiProgress.value = null
+      streamingContent.value = null
+    }
   }
 }
 

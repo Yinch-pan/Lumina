@@ -176,17 +176,46 @@ function registerIpcHandlers() {
   ipcMain.handle('save-setting', async (_event, key: string, value: string) =>
     getSettingsService().saveSetting(key, value)
   )
+  ipcMain.handle('get-llm-usage-stats', async () => cloneForIpc(await getSettingsService().getLLMUsageStats()))
+  ipcMain.handle('fetch-llm-models', async () => cloneForIpc(await getSettingsService().fetchModels()))
+  ipcMain.handle('get-agent-run-history', async (_event, limit?: number) =>
+    cloneForIpc(await getSettingsService().getAgentRunHistory(limit))
+  )
 
   // 模块 C: AI 功能
   ipcMain.handle('clean-article', async (_event, articleId: string) =>
     cloneForIpc(await getArticleService().getArticleContent(articleId))
   )
-  ipcMain.handle('summarize-article', async (_event, articleId: string) =>
-    cloneForIpc(await getSummaryService().summarize(articleId))
-  )
-  ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) =>
-    cloneForIpc(await getTranslationService().translate(articleId, targetLang))
-  )
+  ipcMain.handle('summarize-article', async (event, articleId: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    return cloneForIpc(await getSummaryService().summarize(articleId, onProgress))
+  })
+  ipcMain.handle('translate-article', async (event, articleId: string, targetLang: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    return cloneForIpc(await getTranslationService().translate(articleId, targetLang, onProgress))
+  })
+  ipcMain.handle('summarize-article-stream', async (event, articleId: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    const onChunk = (chunk: string) => {
+      event.sender.send('ai-chunk', { type: 'summary', chunk })
+    }
+    return cloneForIpc(await getSummaryService().summarizeStream(articleId, onProgress, onChunk))
+  })
+  ipcMain.handle('translate-article-stream', async (event, articleId: string, targetLang: string) => {
+    const onProgress = (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => {
+      event.sender.send('ai-progress', data)
+    }
+    const onChunk = (chunk: string) => {
+      event.sender.send('ai-chunk', { type: 'translation', chunk })
+    }
+    return cloneForIpc(await getTranslationService().translateStream(articleId, targetLang, onProgress, onChunk))
+  })
 }
 
 function initializeServices() {

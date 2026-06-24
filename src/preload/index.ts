@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   summarizeArticle: (articleId: string) => ipcRenderer.invoke('summarize-article', articleId),
   translateArticle: (articleId: string, targetLang: string) =>
     ipcRenderer.invoke('translate-article', articleId, targetLang),
+  summarizeArticleStream: (articleId: string) => ipcRenderer.invoke('summarize-article-stream', articleId),
+  translateArticleStream: (articleId: string, targetLang: string) =>
+    ipcRenderer.invoke('translate-article-stream', articleId, targetLang),
 
   // 模块 D: 标签管理
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
@@ -60,5 +63,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveLLMConfig: (config: { baseUrl?: string; apiKey?: string; model?: string }) =>
     ipcRenderer.invoke('save-llm-config', config),
   getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
-  saveSetting: (key: string, value: string) => ipcRenderer.invoke('save-setting', key, value)
+  saveSetting: (key: string, value: string) => ipcRenderer.invoke('save-setting', key, value),
+  getLLMUsageStats: () => ipcRenderer.invoke('get-llm-usage-stats'),
+  fetchLLMModels: () => ipcRenderer.invoke('fetch-llm-models'),
+  getAgentRunHistory: (limit?: number) => ipcRenderer.invoke('get-agent-run-history', limit),
+  onAIProgress: (callback: (data: { type: string; attempt: number; maxAttempts: number; error?: string }) => void) => {
+    const handler = (_event: any, data: any) => callback(data)
+    ipcRenderer.on('ai-progress', handler)
+    return () => ipcRenderer.removeListener('ai-progress', handler)
+  },
+  onAIChunk: (callback: (data: { type: string; chunk: string }) => void) => {
+    const handler = (_event: any, data: any) => callback(data)
+    ipcRenderer.on('ai-chunk', handler)
+    return () => ipcRenderer.removeListener('ai-chunk', handler)
+  }
 })
