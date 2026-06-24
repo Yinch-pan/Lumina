@@ -48,7 +48,7 @@ declare global {
           error?: string
         }) => void
       ) => () => void
-
+      onSummaryProgress: (cb: (payload: { articleId: string; chunk: string; done: boolean }) => void) => () => void
       // 模块 D: 标签管理
       getAllTags: () => Promise<Tag[]>
       createTag: (name: string) => Promise<Tag>

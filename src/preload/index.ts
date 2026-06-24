@@ -68,6 +68,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('translate-progress', listener)
     return () => ipcRenderer.removeListener('translate-progress', listener)
   },
+  onSummaryProgress: (cb: (payload: { articleId: string; chunk: string; done: boolean }) => void) => {
+    const listener = (_e: unknown, payload: { articleId: string; chunk: string; done: boolean }) => cb(payload)
+    ipcRenderer.on('summary-progress', listener)
+    return () => ipcRenderer.removeListener('summary-progress', listener)
+  },
 
   // 模块 D: 标签管理
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),

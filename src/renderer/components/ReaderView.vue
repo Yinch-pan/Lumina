@@ -50,9 +50,9 @@
 
       <main v-if="readerMode === 'clean'" ref="contentRef" class="reader-content" @scroll="onScroll">
         <div class="content-section">
-          <section v-if="article.summary" class="ai-section">
+          <section v-if="article && (article.summary || summaryStreaming)" class="ai-section">
             <div class="ai-section-title">AI &#25688;&#35201;</div>
-            <div class="ai-content">{{ article.summary }}</div>
+            <div class="ai-content">{{ article.summary }}<span v-if="summaryStreaming" class="stream-cursor">▋</span></div>
           </section>
 
           <section v-if="translationSegments && translationSegments.length" class="ai-section">
@@ -180,6 +180,7 @@ const props = defineProps<{
     scrollPercent?: number
     tags: string[]
   } | null
+  summaryStreaming?: boolean
   translationSegments?: Array<{
     index: number
     source: string
@@ -888,5 +889,15 @@ watch(
   cursor: pointer;
   align-self: flex-start;
   padding: 0;
+}
+
+.stream-cursor {
+  animation: blink 1s step-end infinite;
+  color: #409eff;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 </style>

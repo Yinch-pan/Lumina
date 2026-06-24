@@ -204,7 +204,16 @@ function registerIpcHandlers() {
     cloneForIpc(await getArticleService().getArticleContent(articleId))
   )
   ipcMain.handle('summarize-article', async (_event, articleId: string, length?: 'short' | 'medium' | 'long') =>
-    cloneForIpc(await getSummaryService().summarize(articleId, length))
+    cloneForIpc(
+      await getSummaryService()
+        .summarizeStream(articleId, length, (chunk) => {
+          mainWindow?.webContents.send('summary-progress', { articleId, chunk, done: false })
+        })
+        .then((full) => {
+          mainWindow?.webContents.send('summary-progress', { articleId, chunk: '', done: true })
+          return full
+        })
+    )
   )
   ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) =>
     cloneForIpc(await getTranslationService().translate(articleId, targetLang, (segment, total) => {

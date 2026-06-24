@@ -32,6 +32,7 @@
         :article="selectedArticle"
         :translationSegments="translationSegments"
         :highlights="highlights"
+        :summaryStreaming="summaryStreaming"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -199,6 +200,8 @@ const highlights = ref<
   }>
 >([])
 let unsubscribeTranslate: (() => void) | null = null
+const summaryStreaming = ref(false)
+let unsubscribeSummary: (() => void) | null = null
 const articleList = ref<Article[]>(mockArticles)
 const showSettings = ref(false)
 const showTagDialog = ref(false)
@@ -260,10 +263,25 @@ onMounted(() => {
       else translationSegments.value = [...translationSegments.value, seg].sort((a, b) => a.index - b.index)
     })
   }
+
+  if (window.electronAPI?.onSummaryProgress) {
+    unsubscribeSummary = window.electronAPI.onSummaryProgress((payload) => {
+      if (payload.articleId !== selectedArticleId.value || !selectedArticleContent.value) return
+      if (payload.done) {
+        summaryStreaming.value = false
+        return
+      }
+      selectedArticleContent.value = {
+        ...selectedArticleContent.value,
+        summary: (selectedArticleContent.value.summary ?? '') + payload.chunk
+      }
+    })
+  }
 })
 
 onUnmounted(() => {
   unsubscribeTranslate?.()
+  unsubscribeSummary?.()
 })
 
 const loadFeeds = async () => {
@@ -367,6 +385,7 @@ const handleSelectArticle = async (articleId: string) => {
   selectedArticleId.value = articleId
   translationSegments.value = []
   highlights.value = []
+  summaryStreaming.value = false
   if (!window.electronAPI || useMockData.value) {
     selectedArticleContent.value = mockArticleContent
     return
@@ -742,11 +761,15 @@ const handleSummarize = async (length: 'short' | 'medium' | 'long' = 'medium') =
   }
 
   try {
+    selectedArticleContent.value = { ...selectedArticleContent.value, summary: '' }
+    summaryStreaming.value = true
     const summary = await window.electronAPI.summarizeArticle(selectedArticleId.value, length)
     selectedArticleContent.value = { ...selectedArticleContent.value, summary }
   } catch (error) {
     console.error('Failed to summarize article', error)
     alert(`摘要生成失败：${error instanceof Error ? error.message : String(error)}`)
+  } finally {
+    summaryStreaming.value = false
   }
 }
 
