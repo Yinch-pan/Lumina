@@ -37,6 +37,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('summarize-article', articleId, length),
   translateArticle: (articleId: string, targetLang: string) =>
     ipcRenderer.invoke('translate-article', articleId, targetLang),
+  onTranslateProgress: (
+    cb: (payload: {
+      articleId: string
+      index: number
+      total: number
+      source: string
+      translated: string
+      status: 'success' | 'failed'
+      error?: string
+    }) => void
+  ) => {
+    const listener = (
+      _e: unknown,
+      payload: {
+        articleId: string
+        index: number
+        total: number
+        source: string
+        translated: string
+        status: 'success' | 'failed'
+        error?: string
+      }
+    ) => cb(payload)
+    ipcRenderer.on('translate-progress', listener)
+    return () => ipcRenderer.removeListener('translate-progress', listener)
+  },
 
   // 模块 D: 标签管理
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),

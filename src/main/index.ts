@@ -189,7 +189,9 @@ function registerIpcHandlers() {
     cloneForIpc(await getSummaryService().summarize(articleId, length))
   )
   ipcMain.handle('translate-article', async (_event, articleId: string, targetLang: string) =>
-    cloneForIpc(await getTranslationService().translate(articleId, targetLang))
+    cloneForIpc(await getTranslationService().translate(articleId, targetLang, (segment, total) => {
+      mainWindow?.webContents.send('translate-progress', { articleId, total, ...segment })
+    }))
   )
 }
 

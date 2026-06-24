@@ -51,7 +51,14 @@
             <div class="ai-content">{{ article.summary }}</div>
           </section>
 
-          <section v-if="article.translation" class="ai-section">
+          <section v-if="translationSegments && translationSegments.length" class="ai-section">
+            <div class="ai-section-title">AI &#32763;&#35793;&#65288;&#21452;&#35821;&#23545;&#29031;&#65289;</div>
+            <div v-for="seg in translationSegments" :key="seg.index" class="bilingual-block">
+              <p class="bilingual-source">{{ seg.source }}</p>
+              <p class="bilingual-target" :class="{ failed: seg.status === 'failed' }">{{ seg.translated }}</p>
+            </div>
+          </section>
+          <section v-else-if="article && article.translation" class="ai-section">
             <div class="ai-section-title">AI &#32763;&#35793;</div>
             <div class="ai-content">{{ article.translation }}</div>
           </section>
@@ -91,6 +98,12 @@ const props = defineProps<{
     translation?: string
     tags: string[]
   } | null
+  translationSegments?: Array<{
+    index: number
+    source: string
+    translated: string
+    status: 'success' | 'failed'
+  }>
 }>()
 
 defineEmits<{
@@ -228,6 +241,25 @@ const hasCleanedHtml = computed(() => Boolean(props.article?.cleanedHtml?.trim()
   line-height: 1.8;
   color: #4b5563;
   white-space: pre-wrap;
+}
+
+.bilingual-block {
+  margin-bottom: 14px;
+}
+
+.bilingual-source {
+  color: #909399;
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.bilingual-target {
+  color: #26313d;
+  margin: 0;
+}
+
+.bilingual-target.failed {
+  color: #c0392b;
 }
 
 .article-content {

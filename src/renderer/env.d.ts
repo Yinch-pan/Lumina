@@ -34,6 +34,17 @@ declare global {
       cleanArticle: (articleId: string) => Promise<ArticleContent>
       summarizeArticle: (articleId: string, length?: 'short' | 'medium' | 'long') => Promise<string>
       translateArticle: (articleId: string, targetLang: string) => Promise<string>
+      onTranslateProgress: (
+        cb: (payload: {
+          articleId: string
+          index: number
+          total: number
+          source: string
+          translated: string
+          status: 'success' | 'failed'
+          error?: string
+        }) => void
+      ) => () => void
 
       // 模块 D: 标签管理
       getAllTags: () => Promise<Tag[]>

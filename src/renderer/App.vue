@@ -28,6 +28,7 @@
       />
       <ReaderView
         :article="selectedArticle"
+        :translationSegments="translationSegments"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -76,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import TitleBar from './components/TitleBar.vue'
 import FeedSidebar from './components/FeedSidebar.vue'
 import ArticleList from './components/ArticleList.vue'
@@ -174,6 +175,10 @@ const selectedFeedId = ref('1')
 const selectedTag = ref('全部')
 const selectedArticleId = ref('1')
 const selectedArticleContent = ref<ArticleContent | null>(mockArticleContent)
+const translationSegments = ref<
+  Array<{ index: number; source: string; translated: string; status: 'success' | 'failed' }>
+>([])
+let unsubscribeTranslate: (() => void) | null = null
 const articleList = ref<Article[]>(mockArticles)
 const showSettings = ref(false)
 const showTagDialog = ref(false)
@@ -220,6 +225,25 @@ onMounted(() => {
   void loadFeeds()
   void loadTags()
   void applyReadingSettings()
+
+  if (window.electronAPI?.onTranslateProgress) {
+    unsubscribeTranslate = window.electronAPI.onTranslateProgress((payload) => {
+      if (payload.articleId !== selectedArticleId.value) return
+      const seg = {
+        index: payload.index,
+        source: payload.source,
+        translated: payload.translated,
+        status: payload.status
+      }
+      const existing = translationSegments.value.findIndex((s) => s.index === payload.index)
+      if (existing >= 0) translationSegments.value[existing] = seg
+      else translationSegments.value = [...translationSegments.value, seg].sort((a, b) => a.index - b.index)
+    })
+  }
+})
+
+onUnmounted(() => {
+  unsubscribeTranslate?.()
 })
 
 const loadFeeds = async () => {
@@ -320,6 +344,7 @@ const handleSelectTag = (tagName: string) => {
 
 const handleSelectArticle = async (articleId: string) => {
   selectedArticleId.value = articleId
+  translationSegments.value = []
   if (!window.electronAPI || useMockData.value) {
     selectedArticleContent.value = mockArticleContent
     return
@@ -714,6 +739,7 @@ const handleTranslate = async () => {
   }
 
   try {
+    translationSegments.value = []
     const translation = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
     selectedArticleContent.value = { ...selectedArticleContent.value, translation }
   } catch (error) {
