@@ -9,6 +9,7 @@ import { FeedService } from './services/FeedService'
 import { SettingsService } from './services/SettingsService'
 import { SummaryService } from './services/SummaryService'
 import { TagService } from './services/TagService'
+import { TagSuggestionService } from './services/TagSuggestionService'
 import { TranslationService } from './services/TranslationService'
 import { encryptSecret, isEncrypted } from './security/secureStore'
 import { LLMConfig, OpmlFeed } from './types'
@@ -21,6 +22,7 @@ let exportService: ExportService | null = null
 let settingsService: SettingsService | null = null
 let summaryService: SummaryService | null = null
 let translationService: TranslationService | null = null
+let tagSuggestionService: TagSuggestionService | null = null
 let autoRefreshTimer: NodeJS.Timeout | null = null
 
 const AUTO_REFRESH_CHECK_INTERVAL_MS = 60 * 1000
@@ -156,6 +158,9 @@ function registerIpcHandlers() {
   ipcMain.handle('get-articles-by-tag', async (_event, tagName: string) =>
     cloneForIpc(await getTagService().getArticlesByTag(tagName))
   )
+  ipcMain.handle('suggest-tags', async (_event, articleId: string) =>
+    cloneForIpc(await getTagSuggestionService().suggestTags(articleId))
+  )
 
   // 模块 D: Markdown 导出
   ipcMain.handle('select-markdown-export-path', async (_event, defaultFilename: string) => {
@@ -217,6 +222,7 @@ function initializeServices() {
   migratePlaintextApiKey(repository)
   summaryService = new SummaryService(repository, () => getSettingsService().getLLMConfig())
   translationService = new TranslationService(repository, () => getSettingsService().getLLMConfig())
+  tagSuggestionService = new TagSuggestionService(repository, () => getSettingsService().getLLMConfig())
   startAutoRefreshScheduler()
 }
 
@@ -277,6 +283,13 @@ function getTranslationService(): TranslationService {
     throw new Error('TranslationService is not initialized')
   }
   return translationService
+}
+
+function getTagSuggestionService(): TagSuggestionService {
+  if (!tagSuggestionService) {
+    throw new Error('TagSuggestionService is not initialized')
+  }
+  return tagSuggestionService
 }
 
 function cloneForIpc<T>(value: T): T {

@@ -57,6 +57,7 @@ declare global {
       removeTagFromArticle: (articleId: string, tagName: string) => Promise<void>
       getArticleTags: (articleId: string) => Promise<Tag[]>
       getArticlesByTag: (tagName: string) => Promise<Article[]>
+      suggestTags: (articleId: string) => Promise<string[]>
 
       // 模块 D: Markdown 导出
       selectMarkdownExportPath: (defaultFilename: string) => Promise<string | null>

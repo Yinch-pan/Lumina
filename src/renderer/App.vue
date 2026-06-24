@@ -74,6 +74,7 @@
     />
     <TagDialog
       v-if="showTagDialog"
+      :articleId="selectedArticleId"
       @close="showTagDialog = false"
       @confirm="handleTagConfirm"
     />
@@ -766,15 +767,17 @@ const handleAddTag = () => {
   showTagDialog.value = true
 }
 
-const handleTagConfirm = async (tagName: string) => {
+const handleTagConfirm = async (tagNames: string[]) => {
   showTagDialog.value = false
 
-  if (!window.electronAPI || !selectedArticleId.value) {
+  if (!window.electronAPI || !selectedArticleId.value || !tagNames.length) {
     return
   }
 
   try {
-    await window.electronAPI.addTagToArticle(selectedArticleId.value, tagName)
+    for (const name of tagNames) {
+      await window.electronAPI.addTagToArticle(selectedArticleId.value, name)
+    }
     selectedArticleContent.value = await window.electronAPI.getArticleContent(selectedArticleId.value)
     articleList.value = await window.electronAPI.getArticleList(selectedFeedId.value)
     await loadTags()

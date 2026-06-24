@@ -5,7 +5,7 @@
 
 import type { LLMProvider, LLMResponse, Message, ChatOptions } from './provider'
 import type { LLMProviderConfig } from './config'
-import { renderPrompt, SummaryPromptTemplates, SummaryMaxTokens, type SummaryLength, TranslationPromptTemplate } from './config'
+import { renderPrompt, SummaryPromptTemplates, SummaryMaxTokens, type SummaryLength, TranslationPromptTemplate, TagSuggestionPromptTemplate } from './config'
 import { OpenAICompatibleProvider } from './provider'
 
 /**
@@ -171,5 +171,34 @@ export class TranslationAgent {
       content: text
     })
     return await this.provider.chat([{ role: 'user', content: prompt }])
+  }
+}
+
+/**
+ * 标签建议代理
+ * 基于 LLMProvider 根据文章内容推荐候选标签（仅建议，由用户确认后应用）
+ */
+export class TagSuggestionAgent {
+  private provider: LLMProvider
+
+  constructor(config: LLMProviderConfig, provider?: LLMProvider) {
+    this.provider = provider ?? new OpenAICompatibleProvider(config)
+  }
+
+  async suggest(markdown: string, title: string, existingTags: string[]): Promise<string[]> {
+    if (!markdown.trim()) {
+      throw new Error('Content cannot be empty')
+    }
+    const prompt = renderPrompt(TagSuggestionPromptTemplate, {
+      title: title || 'Untitled',
+      content: markdown,
+      existingTags: existingTags.length ? existingTags.join(', ') : '（无）',
+    })
+    const resp = await this.provider.chat([{ role: 'user', content: prompt }], { maxTokens: 128 })
+    return resp.content
+      .split(/[,，、\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 6)
   }
 }

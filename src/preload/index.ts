@@ -79,6 +79,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('remove-tag-from-article', articleId, tagName),
   getArticleTags: (articleId: string) => ipcRenderer.invoke('get-article-tags', articleId),
   getArticlesByTag: (tagName: string) => ipcRenderer.invoke('get-articles-by-tag', tagName),
+  suggestTags: (articleId: string) => ipcRenderer.invoke('suggest-tags', articleId),
 
   // 模块 D: Markdown 导出
   selectMarkdownExportPath: (defaultFilename: string) =>
