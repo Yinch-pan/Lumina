@@ -33,6 +33,9 @@
         :translationSegments="translationSegments"
         :highlights="highlights"
         :summaryStreaming="summaryStreaming"
+        :hasPrev="hasPrev"
+        :hasNext="hasNext"
+        @navigate="handleNavigate"
         @summarize="handleSummarize"
         @translate="handleTranslate"
         @add-tag="handleAddTag"
@@ -406,6 +409,17 @@ const handleSelectArticle = async (articleId: string) => {
     console.error('Failed to load article content', error)
     alert(`加载文章失败：${error instanceof Error ? error.message : String(error)}`)
   }
+}
+
+const currentIndex = computed(() => articles.value.findIndex((a) => a.id === selectedArticleId.value))
+const hasPrev = computed(() => currentIndex.value > 0)
+const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < articles.value.length - 1)
+
+const handleNavigate = (direction: 'prev' | 'next') => {
+  const idx = currentIndex.value
+  if (idx < 0) return
+  const target = direction === 'prev' ? articles.value[idx - 1] : articles.value[idx + 1]
+  if (target) void handleSelectArticle(target.id)
 }
 
 const handleAddFeed = async () => {

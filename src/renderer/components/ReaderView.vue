@@ -13,6 +13,14 @@
         </div>
 
         <div class="reader-actions">
+          <button class="action-btn" :disabled="!hasPrev" @click="$emit('navigate', 'prev')" title="上一篇">
+            <ChevronLeft class="action-icon" />
+            <span>上一篇</span>
+          </button>
+          <button class="action-btn" :disabled="!hasNext" @click="$emit('navigate', 'next')" title="下一篇">
+            <ChevronRight class="action-icon" />
+            <span>下一篇</span>
+          </button>
           <button class="action-btn" @click="$emit('summarize', 'short')">
             <FileText class="action-icon" />
             <span>&#30701;&#25688;&#35201;</span>
@@ -213,6 +221,8 @@ const props = defineProps<{
     scrollPercent?: number
     tags: string[]
   } | null
+  hasPrev?: boolean
+  hasNext?: boolean
   summaryStreaming?: boolean
   translationSegments?: Array<{
     index: number
@@ -234,6 +244,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   summarize: [length: 'short' | 'medium' | 'long']
+  navigate: [direction: 'prev' | 'next']
   translate: []
   'add-tag': []
   'mark-unread': []
@@ -664,6 +675,16 @@ watch(
   width: 15px;
   height: 15px;
   flex-shrink: 0;
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.action-btn:disabled:hover {
+  border-color: #dcdfe6;
+  color: #4b5563;
+  background: #ffffff;
 }
 
 .reader-content {
