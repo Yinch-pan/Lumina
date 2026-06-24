@@ -234,6 +234,7 @@ export class Repository {
           ...entry,
           id: existing.id
         })
+      this.syncEntryFts(existing.id)
       return { id: existing.id, inserted: false }
     }
 
@@ -250,6 +251,7 @@ export class Repository {
         isRead: entry.isRead ? 1 : 0
       })
 
+    this.syncEntryFts(entry.id)
     return { id: entry.id, inserted: true }
   }
 
@@ -293,6 +295,35 @@ export class Repository {
 
   getEntryRowById(entryId: string): EntryRow | undefined {
     return this.db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as EntryRow | undefined
+  }
+
+  private syncEntryFts(entryId: string): void {
+    const row = this.db.prepare(`
+      SELECT entries.rowid AS rowid, entries.title AS title,
+             entries.excerpt AS excerpt,
+             COALESCE(entry_contents.cleaned_markdown, '') AS content
+      FROM entries
+      LEFT JOIN entry_contents ON entry_contents.entry_id = entries.id
+      WHERE entries.id = ?
+    `).get(entryId) as { rowid: number; title: string; excerpt: string | null; content: string } | undefined
+    if (!row) return
+    this.db.prepare('DELETE FROM entries_fts WHERE rowid = ?').run(row.rowid)
+    this.db.prepare('INSERT INTO entries_fts (rowid, title, excerpt, content) VALUES (?, ?, ?, ?)')
+      .run(row.rowid, row.title ?? '', row.excerpt ?? '', row.content ?? '')
+  }
+
+  searchArticles(query: string): Article[] {
+    const trimmed = query.trim()
+    if (!trimmed) return []
+    const ftsQuery = trimmed.split(/\s+/).map((t) => `"${t.replace(/"/g, '""')}"`).join(' ')
+    const rows = this.db.prepare(`
+      SELECT entries.*
+      FROM entries_fts
+      JOIN entries ON entries.rowid = entries_fts.rowid
+      WHERE entries_fts MATCH ?
+      ORDER BY COALESCE(entries.published_at, entries.created_at) DESC
+    `).all(ftsQuery) as EntryRow[]
+    return rows.map((row) => this.toArticle(row))
   }
 
   getArticleContent(entryId: string): ArticleContent | undefined {
@@ -347,6 +378,7 @@ export class Repository {
           fetched_at = COALESCE(excluded.fetched_at, entry_contents.fetched_at)`
       )
       .run(content)
+    this.syncEntryFts(content.entryId)
   }
 
   markAsRead(entryId: string): void {

@@ -229,6 +229,30 @@ const MIGRATIONS: Migration[] = [
     })
     tx()
   },
+  // v4: 把 entries_fts 重建为常规 FTS5 表。
+  // contentless 表(content='')不支持 DELETE/UPDATE，导致重新同步单条记录时报
+  // "cannot DELETE from contentless fts5 table"。常规 FTS5 表支持 DELETE+INSERT 更新。
+  (db) => {
+    db.exec('DROP TABLE IF EXISTS entries_fts')
+    db.exec(`
+      CREATE VIRTUAL TABLE entries_fts USING fts5(
+        title, excerpt, content,
+        tokenize='unicode61'
+      )
+    `)
+    const rows = db.prepare(`
+      SELECT entries.rowid AS rowid, entries.title AS title,
+             entries.excerpt AS excerpt,
+             COALESCE(entry_contents.cleaned_markdown, '') AS content
+      FROM entries
+      LEFT JOIN entry_contents ON entry_contents.entry_id = entries.id
+    `).all() as Array<{ rowid: number; title: string | null; excerpt: string | null; content: string | null }>
+    const insert = db.prepare('INSERT INTO entries_fts (rowid, title, excerpt, content) VALUES (?, ?, ?, ?)')
+    const tx = db.transaction(() => {
+      for (const row of rows) insert.run(row.rowid, row.title ?? '', row.excerpt ?? '', row.content ?? '')
+    })
+    tx()
+  },
 ]
 
 function runMigrations(db: Database.Database): void {
