@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { Repository } from '../database/repository'
 import { TranslationAgent } from '../llm/agents'
 import { LLMConfig } from '../types'
+import { ArticleService } from './ArticleService'
 import { ITranslationService } from './interfaces'
 
 export interface TranslationSegment {
@@ -17,7 +18,8 @@ export type TranslationProgress = (segment: TranslationSegment, total: number) =
 export class TranslationService implements ITranslationService {
   constructor(
     private readonly repository: Repository,
-    private readonly getConfig: () => Promise<LLMConfig> | LLMConfig
+    private readonly getConfig: () => Promise<LLMConfig> | LLMConfig,
+    private readonly articleService?: ArticleService
   ) {}
 
   async translate(
@@ -29,9 +31,13 @@ export class TranslationService implements ITranslationService {
       throw new Error('Article ID cannot be empty')
     }
     const normalizedTargetLang = targetLang.trim() || '中文'
-    const content = this.repository.getArticleContent(articleId)
+    let content = this.repository.getArticleContent(articleId)
     if (!content) {
       throw new Error(`Article not found: ${articleId}`)
+    }
+
+    if (this.articleService && shouldFetchFullArticleForAi(content)) {
+      content = await this.articleService.getArticleContentForAi(articleId)
     }
 
     const markdown = content.cleanedMarkdown || content.rawHtml
@@ -104,4 +110,22 @@ export class TranslationService implements ITranslationService {
     }
     return combined
   }
+}
+
+function shouldFetchFullArticleForAi(content: { cleanedMarkdown?: string; rawHtml?: string }): boolean {
+  const markdown = content.cleanedMarkdown?.trim() || ''
+  if (!markdown) {
+    return true
+  }
+
+  const paragraphCount = markdown
+    .split(/\n\n+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean).length
+
+  if (paragraphCount >= 2) {
+    return false
+  }
+
+  return markdown.length < 280
 }

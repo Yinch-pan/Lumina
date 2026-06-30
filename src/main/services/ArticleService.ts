@@ -47,6 +47,14 @@ export class ArticleService implements IArticleService {
   }
 
   async getArticleContent(articleId: string): Promise<ArticleContent> {
+    return this.loadArticleContent(articleId, false)
+  }
+
+  async getArticleContentForAi(articleId: string): Promise<ArticleContent> {
+    return this.loadArticleContent(articleId, true)
+  }
+
+  private async loadArticleContent(articleId: string, forceRefresh: boolean): Promise<ArticleContent> {
     const entry = this.repository.getEntryRowById(articleId)
     if (!entry) {
       throw new Error(`Article not found: ${articleId}`)
@@ -57,9 +65,13 @@ export class ArticleService implements IArticleService {
       throw new Error(`Article content cannot be loaded: ${articleId}`)
     }
 
-    if (!content.rawHtml) {
+    const hasReadableContent = Boolean(
+      content.cleanedHtml?.trim() || content.cleanedMarkdown?.trim() || content.rawHtml?.trim()
+    )
+
+    if (forceRefresh || !hasReadableContent) {
       const rawHtml = await this.fetchText(entry.url)
-      this.repository.upsertEntryContent({
+      this.repository.upsertEntryContentForAi({
         entryId: articleId,
         rawHtml,
         cleanedHtml: null,

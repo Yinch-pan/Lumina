@@ -43,6 +43,18 @@ async function main() {
     isRead: false,
     createdAt: now
   })
+  repository.upsertEntry({
+    id: 'entry-rss-only',
+    feedId: 'feed-1',
+    title: 'RSS Only Article',
+    url: 'https://example.com/articles/rss-only',
+    author: 'Bob',
+    publishedAt: now,
+    guid: 'entry-guid-rss-only',
+    excerpt: 'RSS excerpt',
+    isRead: false,
+    createdAt: now
+  })
 
   const cleaner = new ContentCleaner()
   const cleaned = cleaner.clean('<article><h1>Readable Article</h1><p>Hello <a href="/x">Mercury</a>.</p><script>alert(1)</script></article>', 'https://example.com/articles/1')
@@ -55,6 +67,13 @@ async function main() {
     rawHtml: '<article><p>Hello Mercury.</p></article>',
     cleanedHtml: cleaned.cleanedHtml,
     cleanedMarkdown: cleaned.cleanedMarkdown,
+    fetchedAt: now
+  })
+  repository.upsertEntryContent({
+    entryId: 'entry-rss-only',
+    rawHtml: '<article><p>RSS supplied body</p></article>',
+    cleanedHtml: '<article><p>RSS supplied body</p></article>',
+    cleanedMarkdown: 'RSS supplied body',
     fetchedAt: now
   })
 
@@ -73,7 +92,14 @@ async function main() {
   })
 
   const exportPath = path.join(tempDir, 'article.md')
-  const articleService = new ArticleService(repository)
+  const fetchCalls = []
+  const articleService = new ArticleService(repository, async (url) => {
+    fetchCalls.push(url)
+    return '<article><p>Fetched fallback body</p></article>'
+  })
+  const rssOnlyContent = await articleService.getArticleContent('entry-rss-only')
+  assert.match(rssOnlyContent.cleanedHtml || '', /RSS supplied body/)
+  assert.equal(fetchCalls.length, 0)
   const exporter = new ExportService(repository, articleService)
   await exporter.exportArticle('entry-1', exportPath)
   const markdown = fs.readFileSync(exportPath, 'utf-8')
@@ -81,6 +107,11 @@ async function main() {
   assert.match(markdown, /example\.com\/articles\/1/)
   assert.match(markdown, /技术/)
   assert.match(markdown, /Hello \[Mercury\]/)
+
+  const rssOnlyExportPath = path.join(tempDir, 'rss-only.md')
+  await exporter.exportArticle('entry-rss-only', rssOnlyExportPath)
+  const rssOnlyMarkdown = fs.readFileSync(rssOnlyExportPath, 'utf-8')
+  assert.match(rssOnlyMarkdown, /RSS supplied body/)
 
   repository.createAgentRun({
     id: 'run-1',

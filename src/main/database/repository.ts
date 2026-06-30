@@ -310,6 +310,10 @@ export class Repository {
     return this.db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as EntryRow | undefined
   }
 
+  getEntryRowByUrl(url: string): EntryRow | undefined {
+    return this.db.prepare('SELECT * FROM entries WHERE url = ?').get(url) as EntryRow | undefined
+  }
+
   private syncEntryFts(entryId: string): void {
     const row = this.db.prepare(`
       SELECT entries.rowid AS rowid, entries.title AS title,
@@ -392,9 +396,34 @@ export class Repository {
   }
 
   upsertEntryContent(content: EntryContentRecord): void {
-    this.db
-      .prepare(
-        `INSERT INTO entry_contents (
+    this.upsertEntryContentRecord(content, false)
+  }
+
+  upsertEntryContentForAi(content: EntryContentRecord): void {
+    this.upsertEntryContentRecord(content, true)
+  }
+
+  markAsRead(entryId: string): void {
+    this.setReadState(entryId, true)
+  }
+
+  markAsUnread(entryId: string): void {
+    this.setReadState(entryId, false)
+  }
+
+  private upsertEntryContentRecord(content: EntryContentRecord, forceOverwrite: boolean): void {
+    const sql = forceOverwrite
+      ? `INSERT INTO entry_contents (
+          entry_id, raw_html, cleaned_html, cleaned_markdown, fetched_at
+        ) VALUES (
+          @entryId, @rawHtml, @cleanedHtml, @cleanedMarkdown, @fetchedAt
+        )
+        ON CONFLICT(entry_id) DO UPDATE SET
+          raw_html = COALESCE(excluded.raw_html, entry_contents.raw_html),
+          cleaned_html = COALESCE(excluded.cleaned_html, excluded.cleaned_html),
+          cleaned_markdown = COALESCE(excluded.cleaned_markdown, excluded.cleaned_markdown),
+          fetched_at = COALESCE(excluded.fetched_at, entry_contents.fetched_at)`
+      : `INSERT INTO entry_contents (
           entry_id, raw_html, cleaned_html, cleaned_markdown, fetched_at
         ) VALUES (
           @entryId, @rawHtml, @cleanedHtml, @cleanedMarkdown, @fetchedAt
@@ -404,17 +433,9 @@ export class Repository {
           cleaned_html = COALESCE(excluded.cleaned_html, entry_contents.cleaned_html),
           cleaned_markdown = COALESCE(excluded.cleaned_markdown, entry_contents.cleaned_markdown),
           fetched_at = COALESCE(excluded.fetched_at, entry_contents.fetched_at)`
-      )
-      .run(content)
+
+    this.db.prepare(sql).run(content)
     this.syncEntryFts(content.entryId)
-  }
-
-  markAsRead(entryId: string): void {
-    this.setReadState(entryId, true)
-  }
-
-  markAsUnread(entryId: string): void {
-    this.setReadState(entryId, false)
   }
 
   setStarred(entryId: string, starred: boolean): void {

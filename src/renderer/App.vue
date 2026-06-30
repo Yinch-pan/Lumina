@@ -464,15 +464,34 @@ const submitAddFeed = async (payload: { url: string; title?: string }) => {
     if (payload.title) {
       feed = await window.electronAPI.updateFeed(feed.id, { title: payload.title })
     }
+
     useMockData.value = false
-    await loadFeeds()
-    selectedFeedId.value = feed.id
-    await loadArticles(feed.id)
     showAddSubscription.value = false
+    isAddingFeed.value = false
+
+    const existingIndex = feeds.value.findIndex((item) => item.id === feed.id)
+    if (existingIndex >= 0) {
+      feeds.value = feeds.value.map((item) => (item.id === feed.id ? feed : item))
+    } else {
+      feeds.value = [feed, ...feeds.value]
+    }
+
+    selectedFeedId.value = feed.id
+    articleList.value = []
+    selectedArticleId.value = ''
+    selectedArticleContent.value = null
+    isLoadingArticles.value = true
+
+    void loadFeeds().catch((error) => {
+      console.error('Failed to refresh feeds after add', error)
+    })
+
+    void loadArticles(feed.id).catch((error) => {
+      console.error('Failed to load articles after add', error)
+    })
   } catch (error) {
     console.error('Failed to add feed', error)
     feedDialogError.value = `添加订阅失败：${error instanceof Error ? error.message : String(error)}`
-  } finally {
     isAddingFeed.value = false
   }
 }

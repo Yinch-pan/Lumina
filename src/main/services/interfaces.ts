@@ -76,6 +76,9 @@ export interface IArticleService {
 
   // 兼容模块协作文档中的命名
   getEntryContent(articleId: string): Promise<ArticleContent>
+
+  // 给 AI 功能使用：如果正文过短则强制重新抓取并清洗网页内容
+  getArticleContentForAi(articleId: string): Promise<ArticleContent>
   // 标记文章为已读
   markAsRead(articleId: string): Promise<void>
 

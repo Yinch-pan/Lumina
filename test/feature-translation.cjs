@@ -5,6 +5,7 @@ const path = require('node:path')
 const { initDatabaseAtPath } = require('../dist/main/database/init.js')
 const { Repository } = require('../dist/main/database/repository.js')
 const { TranslationService } = require('../dist/main/services/TranslationService.js')
+const { ArticleService } = require('../dist/main/services/ArticleService.js')
 
 async function main() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mercury-trans-'))
@@ -25,6 +26,15 @@ async function main() {
     cleanedMarkdown: 'First para.\n\nSecond para.', fetchedAt: now
   })
 
+  repo.upsertEntry({
+    id: 'e2', feedId: 'f1', title: 'Short RSS Article', url: 'https://e.com/2', author: 'B',
+    publishedAt: now, guid: 'g2', excerpt: 'short', isRead: false, createdAt: now
+  })
+  repo.upsertEntryContent({
+    entryId: 'e2', rawHtml: '<article><p>Only first para.</p></article>', cleanedHtml: '<article><p>Only first para.</p></article>',
+    cleanedMarkdown: 'Only first para.', fetchedAt: now
+  })
+
   const svc = new TranslationService(repo, () => ({
     baseUrl: 'http://invalid-host-xyz/v1', apiKey: 'k', model: 'm'
   }))
@@ -37,6 +47,26 @@ async function main() {
   assert.equal(progress[0].seg.status, 'failed')
   assert.ok(result.includes('First para.'))
   assert.ok(result.includes('Second para.'))
+
+  const articleService = new ArticleService(
+    repo,
+    async (url) => '<article><p>Fetched paragraph one.</p>\n\n<p>Fetched paragraph two.</p></article>'
+  )
+  const enrichProgress = []
+  const beforeContent = repo.getArticleContent('e2')
+  const enrichedSvc = new TranslationService(
+    repo,
+    () => ({ baseUrl: 'http://invalid-host-xyz/v1', apiKey: 'k', model: 'm' }),
+    articleService
+  )
+  const enrichedResult = await enrichedSvc.translate('e2', '中文', (seg, total) => enrichProgress.push({ seg, total }))
+  const updatedContent = repo.getArticleContent('e2')
+  assert.ok(enrichProgress.length >= 1)
+  assert.ok(enrichProgress.every((item) => item.total >= 1))
+  assert.notEqual(updatedContent?.rawHtml, beforeContent?.rawHtml)
+  assert.notEqual(updatedContent?.cleanedHtml, beforeContent?.cleanedHtml)
+  assert.notEqual(updatedContent?.cleanedMarkdown, beforeContent?.cleanedMarkdown)
+  assert.ok(enrichedResult.includes(updatedContent?.cleanedMarkdown || ''))
   db.close()
   fs.rmSync(tempDir, { recursive: true, force: true })
 }

@@ -4,7 +4,8 @@ import Parser from 'rss-parser'
 import { XMLBuilder, XMLParser } from 'fast-xml-parser'
 import { Repository } from '../database/repository'
 import { Article, Feed, OpmlFeed, OpmlImportFailure, OpmlImportResult } from '../types'
-import { IFeedService } from './interfaces'
+import { CleaningService } from './CleaningService'
+import { ICleaningService, IFeedService } from './interfaces'
 
 interface ParsedFeedItem {
   title?: string
@@ -17,6 +18,7 @@ interface ParsedFeedItem {
   isoDate?: string
   contentSnippet?: string
   content?: string
+  'content:encoded'?: string
   summary?: string
 }
 
@@ -44,11 +46,15 @@ const TRACKING_QUERY_PARAMS = new Set([
 
 export class FeedService implements IFeedService {
   private readonly parser = new Parser()
+  private readonly cleaningService: ICleaningService
 
   constructor(
     private readonly repository: Repository,
-    private readonly fetchText: FetchText = defaultFetchText
-  ) {}
+    private readonly fetchText: FetchText = defaultFetchText,
+    cleaningService: ICleaningService = new CleaningService()
+  ) {
+    this.cleaningService = cleaningService
+  }
 
   async addFeed(url: string): Promise<Feed> {
     const normalizedUrl = normalizeUrl(url)
@@ -82,7 +88,8 @@ export class FeedService implements IFeedService {
       updatedAt: now
     })
 
-    this.saveFeedItems(feedId, parsed.items, { url: normalizedUrl })
+    const importedEntryIds = this.saveFeedItems(feedId, parsed.items, { url: normalizedUrl })
+    this.startAsyncEnrichment(importedEntryIds)
 
     const feed = this.repository.getAllFeeds().find((item) => item.id === feedId)
     if (!feed) {
@@ -167,7 +174,8 @@ export class FeedService implements IFeedService {
         lastError: null,
         updatedAt: now
       })
-      this.saveFeedItems(feedId, parsed.items, feed)
+      const importedEntryIds = this.saveFeedItems(feedId, parsed.items, feed)
+      this.startAsyncEnrichment(importedEntryIds)
     } catch (error) {
       this.recordRefreshFailure(feed.id, now, error)
       throw error
@@ -309,8 +317,9 @@ export class FeedService implements IFeedService {
     }
   }
 
-  private saveFeedItems(feedId: string, items: ParsedFeedItem[], feed: { url: string }): void {
+  private saveFeedItems(feedId: string, items: ParsedFeedItem[], feed: { url: string }): string[] {
     const now = Date.now()
+    const entryIds: string[] = []
 
     for (const item of items) {
       const url = item.link?.trim() || item.guid?.trim() || item.id?.trim()
@@ -318,9 +327,11 @@ export class FeedService implements IFeedService {
         continue
       }
       const normalizedUrl = normalizeEntryUrl(url, feed.url)
+      const existing = this.repository.getEntryRowByUrl(normalizedUrl)
+      const entryId = existing?.id ?? randomUUID()
 
       this.repository.upsertEntry({
-        id: randomUUID(),
+        id: entryId,
         feedId,
         title: item.title?.trim() || normalizedUrl,
         url: normalizedUrl,
@@ -331,7 +342,55 @@ export class FeedService implements IFeedService {
         isRead: false,
         createdAt: now
       })
+
+      const initialContent = pickRssBody(item)
+      if (initialContent.rawHtml || initialContent.cleanedHtml || initialContent.cleanedMarkdown) {
+        this.repository.upsertEntryContent({
+          entryId,
+          rawHtml: initialContent.rawHtml,
+          cleanedHtml: initialContent.cleanedHtml,
+          cleanedMarkdown: initialContent.cleanedMarkdown,
+          fetchedAt: now
+        })
+      }
+
+      entryIds.push(entryId)
     }
+
+    return entryIds
+  }
+
+  private startAsyncEnrichment(entryIds: string[]): void {
+    void Promise.resolve().then(async () => {
+      for (const entryId of entryIds) {
+        try {
+          const entry = this.repository.getEntryRowById(entryId)
+          const content = this.repository.getArticleContent(entryId)
+          if (!entry || !content) {
+            continue
+          }
+
+          const alreadyEnriched = Boolean(
+            content.rawHtml?.trim() && content.cleanedHtml?.trim() && content.cleanedMarkdown?.trim()
+          )
+          if (alreadyEnriched) {
+            continue
+          }
+
+          const rawHtml = await this.fetchText(entry.url)
+          const cleaned = await this.cleaningService.clean(rawHtml, entry.url)
+          this.repository.upsertEntryContent({
+            entryId,
+            rawHtml,
+            cleanedHtml: cleaned.cleanedHtml,
+            cleanedMarkdown: cleaned.cleanedMarkdown,
+            fetchedAt: Date.now()
+          })
+        } catch (error) {
+          console.error(`Async enrichment failed for ${entryId}:`, error)
+        }
+      }
+    })
   }
 
   private decorateOpmlFeeds(feeds: OpmlFeed[]): OpmlFeed[] {
@@ -522,6 +581,48 @@ function normalizeExcerpt(value: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 300)
+}
+
+function pickRssBody(item: ParsedFeedItem): {
+  rawHtml: string | null
+  cleanedHtml: string | null
+  cleanedMarkdown: string | null
+} {
+  const html = item['content:encoded']?.trim() || item.content?.trim() || item.summary?.trim() || ''
+  if (html) {
+    const cleanedHtml = sanitizeFeedHtml(html)
+    return {
+      rawHtml: html,
+      cleanedHtml,
+      cleanedMarkdown: normalizeExcerpt(cleanedHtml)
+    }
+  }
+
+  const snippet = item.contentSnippet?.trim() || ''
+  if (!snippet) {
+    return { rawHtml: null, cleanedHtml: null, cleanedMarkdown: null }
+  }
+
+  const escaped = escapeHtml(snippet)
+  return {
+    rawHtml: null,
+    cleanedHtml: `<article><p>${escaped}</p></article>`,
+    cleanedMarkdown: snippet
+  }
+}
+
+function sanitizeFeedHtml(value: string): string {
+  const trimmed = value.trim()
+  return trimmed.startsWith('<article') ? trimmed : `<article>${trimmed}</article>`
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
