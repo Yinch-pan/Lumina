@@ -1,272 +1,212 @@
-# Mercury RSS 阅读器
+# Lumina
 
-Mercury 是一个跨平台、本地优先的 RSS 阅读器，基于 Electron + Vue 3 + TypeScript + SQLite 构建。
+> 跨平台、本地优先、AI 增强的 RSS 阅读器。
+
+Lumina（项目代号 Mercury）是一款基于 Electron + Vue 3 + SQLite 的桌面 RSS 阅读器。订阅数据完全本地存储，可离线阅读；接入任意 OpenAI 兼容的大模型后，还能一键完成摘要、翻译、标签推荐。
 
 ## ✨ 功能特性
 
-### ✅ 已实现功能
+### 订阅与同步
+- RSS 2.0 / Atom 1.0 / JSON Feed 解析
+- 添加、编辑、删除订阅源
+- OPML 导入与导出
+- 手动 / 定时刷新，基于 URL、GUID 智能去重
+- 已读 / 未读状态、未读计数
 
-#### 📡 订阅管理（模块 A）
-- ✅ RSS 2.0 和 Atom 1.0 格式订阅源支持
-- ✅ 添加/删除/编辑订阅源
-- ✅ OPML 导入/导出（批量订阅管理）
-- ✅ 手动/自动刷新订阅
-- ✅ 智能去重（基于 URL、GUID）
-- ✅ 已读/未读状态管理
-- ✅ 订阅源自定义名称和刷新间隔
+### 阅读体验
+- 基于 Readability + sanitize-html 的正文清洗
+- 清爽的 Reader View，自动渲染图片、代码块、表格
+- 内嵌 Web 视图，可直接查看原文页面
+- 文本高亮与笔记（多色标记 + 备注）
+- 上一篇 / 下一篇快速切换，自动标记已读
 
-#### 📖 内容清洗与阅读（模块 B）
-- ✅ HTML 内容清洗（sanitize-html）
-- ✅ Markdown 转换（turndown）
-- ✅ 清爽的 Reader View 阅读界面
-- ✅ 自动抓取正文内容
-- ✅ 文章元信息展示（标题、作者、发布时间、来源）
+### AI 增强
+- 短 / 中 / 长三档 AI 摘要
+- 中英互译（任意目标语言）
+- 标签智能推荐
+- 配置任意 OpenAI 兼容接口（OpenAI、Azure、本地模型、第三方网关）
+- AI 结果流式输出，避免长文阻塞
 
-#### 🏷️ 标签、导出与设置（模块 D）
-- ✅ 文章标签管理
-- ✅ 标签自动去重
-- ✅ 按标签筛选文章
-- ✅ Markdown 导出（含元信息、标签）
-- ✅ LLM 配置管理（Base URL、API Key、Model）
-- ✅ 阅读偏好设置（字体大小、行距、主题）
+### 组织与导出
+- 自定义标签，按标签筛选文章
+- 单篇 / 批量 Markdown 导出（含元信息、标签、正文）
+- OPML 导出，迁移到其他阅读器
+- 阅读偏好设置（字体、行距、主题）
 
-#### 🗄️ 数据管理
-- ✅ 本地 SQLite 数据库
-- ✅ 数据完全本地化，无需联网即可阅读
-- ✅ 支持数据导出和备份
-
-### ⚠️ 部分实现功能
-
-#### 🤖 AI 功能（模块 C）
-- ⚠️ AI 文章摘要（需配置 LLM，功能未完全集成）
-- ⚠️ AI 文章翻译（需配置 LLM，功能未完全集成）
-- ✅ 支持 OpenAI-compatible API
-- ✅ LLM 配置持久化
-
-> **注意**：AI 功能的后端服务已实现（SummaryService），但前端集成尚未完成。当前版本配置 LLM 后，摘要和翻译按钮为占位符。
-
----
+### 数据
+- 全部数据保存在本地 SQLite，离线可用
+- API Key 通过 Electron safeStorage 加密落盘
+- 数据目录跨平台一致，便于备份
 
 ## 🚀 快速开始
 
-### 安装依赖
+### 环境要求
+- Node.js ≥ 18
+- npm（或 pnpm / yarn）
+- Windows 用户：建议安装 Visual Studio Build Tools（用于编译 `better-sqlite3` 原生模块）
+
+### 安装
 
 ```bash
 npm install
 ```
-### 开发模式
 
-推荐使用两个终端分别启动：
+中国大陆用户若 Electron 下载缓慢，可在仓库根目录创建 `.npmrc`：
+
+```
+electron_mirror=https://npmmirror.com/mirrors/electron/
+```
+
+若安装后启动报 `MODULE_VERSION` 不匹配，重新编译原生模块：
 
 ```bash
-# 终端 1: 启动 Vite 开发服务器
+npx @electron/rebuild -v 38.8.6 -m node_modules/better-sqlite3
+```
+
+### 开发
+
+需要两个终端，先起 Vite，再起 Electron：
+
+```bash
+# 终端 1
 npm run dev
 
-# 终端 2: 等待 Vite 启动后，启动 Electron
+# 终端 2
 npm run dev:electron
 ```
 
-### 验证与测试
+Windows / WSL 也可直接运行项目自带脚本：
 
 ```bash
-# 编译所有代码（主进程 + 渲染进程）
-npm run build
-
-# 运行服务层回归测试
-npm run test:services
-
-# 运行模块 B 内容清洗验证
-npm run verify:module-b
+./dev.sh
 ```
 
-### 构建打包
+### 验证
 
 ```bash
-# 编译代码
-npm run build
-
-# 打包 Windows 版本
-npm run dist:win
-
-# 打包 macOS 版本
-npm run dist:mac
-
-# 打包 Linux 版本
-npm run dist:linux
+npm run build              # 编译主进程 + 渲染进程
+npm run test:services      # 服务层回归测试
+npm run verify:module-b    # 内容清洗验证
 ```
 
-打包后的文件在 `release/` 目录：
-- Windows: `Mercury-1.0.0-x64.exe` (安装版) 和 `Mercury-1.0.0-Portable.exe` (便携版)
-- macOS: `Mercury-1.0.0-x64.dmg` 和 `Mercury-1.0.0-x64-mac.zip`
-- Linux: `Mercury-1.0.0-x86_64.AppImage` 和 `Mercury-1.0.0-amd64.deb`
+### 打包
 
----
+```bash
+npm run dist:win    # Windows: NSIS 安装包 + Portable
+npm run dist:mac    # macOS: DMG + ZIP
+npm run dist:linux  # Linux: AppImage + DEB
+```
 
-## 📖 使用指南
-
-### 1. 添加订阅源
-
-1. 点击左侧边栏的 **"+"** 按钮
-2. 输入 RSS Feed URL
-3. 点击"添加"
-4. 自动刷新获取文章
-
-**示例 RSS 源：**
-- Hacker News: `https://news.ycombinator.com/rss`
-- 阮一峰的网络日志: `http://www.ruanyifeng.com/blog/atom.xml`
-- GitHub Trending: `https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml`
-
-### 2. 导入 OPML
-
-如果你有其他 RSS 阅读器的订阅列表：
-
-1. 点击左侧边栏的 **"导入"** 按钮
-2. 选择 `.opml` 文件
-3. 选择要导入的订阅源
-4. 点击"导入选中的订阅"
-
-### 3. 阅读文章
-
-1. 在左侧选择订阅源
-2. 在中间选择文章
-3. 右侧显示清洗后的文章正文
-4. 自动标记为已读
-
-### 4. 添加标签
-
-1. 打开一篇文章
-2. 点击右侧的 **"🏷️ 添加标签"** 按钮
-3. 在弹出对话框中输入标签名称
-4. 标签会显示在文章详情中
-
-### 5. 导出 Markdown
-
-1. 打开要导出的文章
-2. 点击右侧的 **"📤 导出"** 按钮
-3. 选择保存位置
-4. 文件包含：标题、元信息、标签、正文
-
-### 6. 配置 LLM（可选）
-
-1. 点击顶部的 **"⚙️"** 设置按钮
-2. 在"大语言模型配置"区域填写：
-   - **Base URL**: 你的 AI API 地址（例如 `https://api.openai.com/v1`）
-   - **API Key**: 你的 API 密钥
-   - **Model**: 模型名称（例如 `gpt-4`）
-3. 点击"保存 LLM 配置"
-
-**支持的 API：**
-- OpenAI API
-- Azure OpenAI
-- OpenAI 兼容接口（本地模型、其他云服务）
-
----
+产物输出到 `release/`。
 
 ## 🛠️ 技术栈
 
-### 前端
-- **框架**: Vue 3.5.34
-- **语言**: TypeScript 6.0.3
-- **构建**: Vite 7.3.5
-- **图标**: Lucide Vue Next
+| 类别 | 选型 |
+|------|------|
+| 桌面框架 | Electron 38 |
+| 前端 | Vue 3.5 + TypeScript + Vite 7 |
+| 数据库 | SQLite（better-sqlite3） |
+| Feed 解析 | rss-parser、fast-xml-parser |
+| 内容清洗 | @mozilla/readability + jsdom + sanitize-html |
+| Markdown | turndown |
+| AI 接入 | openai SDK（OpenAI 兼容协议） |
+| 图标 | lucide-vue-next |
+| 打包 | electron-builder |
 
-### 后端
-- **运行时**: Electron 38.8.6 (Node.js)
-- **数据库**: SQLite (better-sqlite3 12.10.0)
-- **Feed 解析**: rss-parser 3.13.0
-- **内容清洗**: sanitize-html 2.17.4
-- **Markdown 转换**: turndown 7.2.4
-- **AI 接入**: OpenAI SDK 4.0.0
-
-### 打包
-- **工具**: electron-builder 26.8.1
-- **格式**: NSIS / Portable / DMG / AppImage / DEB
-
----
-
-## 📊 项目结构
+## 📂 项目结构
 
 ```
 Mercury/
 ├── src/
-│   ├── main/              # Electron 主进程
-│   │   ├── database/      # SQLite 数据库层
-│   │   ├── services/      # 业务逻辑层
-│   │   ├── llm/          # LLM 相关（SummaryAgent 等）
-│   │   └── index.ts       # 主进程入口
-│   ├── preload/      # Preload 脚本（Context Bridge）
-│   └── renderer/         # Vue 前端
-│       ├── components/   # UI 组件
-│       └── App.vue       # 主应用
-├── docs/               # 项目文档
-├── release/              # 打包输出目录
+│   ├── main/                # Electron 主进程
+│   │   ├── database/        # SQLite Schema + 仓储层
+│   │   ├── services/        # Feed / Article / Cleaning /
+│   │   │                    # Summary / Translation /
+│   │   │                    # Tag / Highlight / Export / Settings
+│   │   ├── cleaners/        # 内容清洗管线
+│   │   ├── llm/             # Provider 抽象 + AI Agents
+│   │   ├── security/        # safeStorage 加密
+│   │   ├── types/           # 共享类型
+│   │   └── index.ts         # 主进程入口
+│   ├── preload/             # Context Bridge IPC API
+│   └── renderer/            # Vue 前端
+│       ├── components/      # FeedSidebar / ArticleList /
+│       │                    # ReaderView / SettingsView / ...
+│       ├── styles/
+│       └── App.vue
+├── docs/                    # 设计与交付文档
+├── test/                    # 回归测试
+├── design/                  # 原型与设计稿
 └── package.json
 ```
 
----
+## 📖 使用指南
+
+### 添加订阅
+1. 点击左侧栏 **+** 按钮
+2. 输入 Feed URL
+3. 自动抓取并入库
+
+常用源示例：
+- Hacker News — `https://news.ycombinator.com/rss`
+- 阮一峰的网络日志 — `http://www.ruanyifeng.com/blog/atom.xml`
+- GitHub Trending — `https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml`
+
+### 配置 LLM
+1. 顶部 **⚙️ 设置** → 大语言模型配置
+2. 填入 Base URL、API Key、Model
+3. 保存后即可在阅读页使用摘要、翻译、标签推荐
+
+支持任何 OpenAI 兼容协议：OpenAI、Azure OpenAI、本地 Ollama / vLLM、第三方网关等。
+
+### AI 摘要 / 翻译
+在阅读页顶部工具栏点击 **短摘要 / 中摘要 / 长摘要**，或 **译为中文 / 译为英文**。结果会以流式方式渲染在正文上方。
+
+### 高亮与笔记
+在正文中选中文本，弹出工具条选择颜色或添加备注。所有高亮持久化到本地数据库，重新打开仍在。
+
+### 导出
+- 单篇导出：阅读页右上角 **📤 导出**
+- 批量导出：列表多选后导出为 Markdown
+- 订阅迁移：设置页导出 OPML
+
+## 🗄️ 数据存储
+
+数据库与配置位于系统标准用户数据目录：
+
+| 平台 | 路径 |
+|------|------|
+| Windows | `%APPDATA%\mercury\` |
+| macOS | `~/Library/Application Support/mercury/` |
+| Linux | `~/.config/mercury/` |
+
+备份只需复制该目录；API Key 已通过 OS 提供的 safeStorage 加密，跨机器迁移需重新输入。
 
 ## 👥 开发团队
 
 | 模块 | 成员 | 职责 |
 |------|------|------|
-| 模块 A：订阅与数据 | 陆锦云、颜泽宇 | Feed 解析、OPML 导入、刷新同步、正文抓取 |
-| 模块 B：清洗与阅读 | 于海洋、刘昊阳 | 内容清洗、Markdown 转换、Reader View |
-| 模块 C：AI 摘要与翻译 | 林宇轩、孙佳杰 | LLM Provider、Summary Agent、Translation Agent |
-| 模块 D：标签、导出与设置 | 潘飞扬、张震 | 标签管理、Markdown 导出、LLM 配置、应用设置 |
+| A · 订阅与数据 | 陆锦云、颜泽宇 | Feed 解析、OPML、刷新同步、正文抓取 |
+| B · 清洗与阅读 | 于海洋、刘昊阳 | HTML 清洗、Markdown 转换、Reader View |
+| C · AI 摘要与翻译 | 林宇轩、孙佳杰 | LLM Provider、Summary / Translation Agent |
+| D · 标签、导出、设置 | 潘飞扬、张震 | 标签、高亮、Markdown 导出、LLM 配置 |
 
----
-
-## 📅 开发时间线
-
-| 阶段 | 周次 | 日期 | 内容 |
-|------|------|------|------|
-| Demo 骨架 | 第 1 周 | 05/18 ~ 05/24 | 项目初始化 + 基础骨架 |
-| 模块并行开发 | 第 2 周 | 05/25 ~ 05/31 | 4 组并行开发各自模块 |
-| 模块并行开发 | 第 3 周 | 06/01 ~ 06/07 | 继续开发 + 模块间初步对接 |
-| 模块并行开发 | 第 4 周 | 06/08 ~ 06/14 | 功能收尾 + 跨模块联调 |
-| 集成交付 | 第 5 周 | 06/15 ~ 06/21 | 集成测试 + Bug 修复 + 文档 + 演示准备 |
-
----
+### 协作节奏
+项目按五周推进，每周由其中一组上台汇报当周进展、演示模块成果并接受其他组的反馈；最后一周由组长进行整体总结汇报，全员一同进入集成测试与 Bug 修复阶段，共同收尾交付。
 
 ## 🐛 已知问题
 
-1. **AI 功能未完全集成**
-   - SummaryService 和 TranslationService 后端已实现
-   - 前端尚未完成 IPC 调用集成
-   - 当前版本点击"摘要"或"翻译"按钮仅显示占位提示
-
-2. **阅读设置未应用**
-   - 字体大小、行距、主题等设置可以保存
-   - 但尚未应用到 Reader View 界面
-
-3. **应用图标使用默认**
-   - 当前使用 Electron 默认图标
-   - 待添加自定义图标（build/icon.ico）
-
----
+- 阅读偏好（字体大小、行距、主题）可保存但尚未完全应用到 Reader View
+- 应用图标仍为 Electron 默认图标，自定义图标资源待补齐
 
 ## 📄 许可证
 
-ISC License
-
-Copyright (c) 2026 Mercury Team
-
----
+ISC License · Copyright © 2026 Lumina Team
 
 ## 🙏 致谢
 
-感谢以下开源项目：
-
-- Electron
-- Vue.js
-- TypeScript
-- Vite
-- better-sqlite3
-- rss-parser
-- sanitize-html
-- turndown
-- 以及所有其他依赖
+感谢 Electron、Vue、Vite、TypeScript、better-sqlite3、rss-parser、@mozilla/readability、sanitize-html、turndown、openai-node 等开源项目。
 
 ---
 
-**祝阅读愉快！** 📚✨
+**Happy reading.** 📚
