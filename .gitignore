@@ -10,4 +10,5 @@ dist
 src/main/llm/config.json
 # Release builds
 release/
+release2/
 dist/
