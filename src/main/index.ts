@@ -35,7 +35,7 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
-    title: 'Mercury',
+    title: 'Lumina',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
@@ -93,12 +93,12 @@ function registerIpcHandlers() {
     const result = mainWindow
       ? await dialog.showSaveDialog(mainWindow, {
           title: '导出 OPML',
-          defaultPath: 'mercury-subscriptions.opml',
+          defaultPath: 'lumina-subscriptions.opml',
           filters: [{ name: 'OPML', extensions: ['opml'] }]
         })
       : await dialog.showSaveDialog({
           title: '导出 OPML',
-          defaultPath: 'mercury-subscriptions.opml',
+          defaultPath: 'lumina-subscriptions.opml',
           filters: [{ name: 'OPML', extensions: ['opml'] }]
         })
 

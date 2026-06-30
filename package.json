@@ -1,7 +1,7 @@
 {
-  "name": "mercury",
+  "name": "lumina",
   "version": "1.0.0",
-  "description": "Mercury 是一个跨平台、本地优先、AI 增强型 RSS 阅读器。",
+  "description": "Lumina 是一个跨平台、本地优先、AI 增强型 RSS 阅读器。",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "vite",
@@ -23,15 +23,15 @@
     "url": "git+https://github.com/Yinch-pan/Mercury.git"
   },
   "keywords": ["rss", "reader", "electron", "ai", "markdown"],
-  "author": "Mercury Team",
+  "author": "Lumina Team",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Yinch-pan/Mercury/issues"
   },
   "homepage": "https://github.com/Yinch-pan/Mercury#readme",
   "build": {
-    "appId": "com.mercury.rss",
-    "productName": "Mercury",
+    "appId": "com.lumina.rss",
+    "productName": "Lumina",
     "directories": {
       "output": "release"
     },
@@ -43,15 +43,10 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
-          "arch": ["x64"]
-        },
-        {
           "target": "portable",
-        "arch": ["x64"]
+          "arch": ["x64"]
         }
       ],
-      "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
@@ -59,7 +54,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Mercury"
+      "shortcutName": "Lumina"
     },
     "portable": {
       "artifactName": "${productName}-${version}-Portable.${ext}"

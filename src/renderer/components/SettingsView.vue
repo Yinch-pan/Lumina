@@ -53,35 +53,9 @@
       <!-- 阅读设置 -->
       <div class="settings-section">
         <h2 class="section-title">📖 阅读设置</h2>
-
-        <div class="form-group">
-          <label class="form-label">字体大小</label>
-          <select class="form-select" v-model="readingSettings.fontSize">
-          <option value="14">小 (14px)</option>
-            <option value="16">中 (16px)</option>
-            <option value="18">大 (18px)</option>
-            <option value="20">特大 (20px)</option>
-        </select>
+        <div class="section-description">
+          正文中的字号、行距、宽度可在阅读页右上角的 Aa 面板里即时调整并自动保存。
         </div>
-
-        <div class="form-group">
-        <label class="form-label">行距</label>
-          <select class="form-select" v-model="readingSettings.lineHeight">
-            <option value="1.5">紧凑 (1.5)</option>
-            <option value="1.8">标准 (1.8)</option>
-        <option value="2.0">宽松 (2.0)</option>
-          </select>
-        </div>
-
-     <div class="form-group">
-          <label class="form-label">主题</label>
-          <select class="form-select" v-model="readingSettings.theme">
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-          </select>
-        </div>
-
-        <button class="btn-primary" :disabled="isSaving" @click="saveReadingSettings">保存阅读设置</button>
       </div>
 
     <!-- AI 用量统计 -->
@@ -110,14 +84,14 @@
 
     <!-- 应用信息 -->
       <div class="settings-section">
-      <h2 class="section-title">ℹ️ 关于 Mercury</h2>
+      <h2 class="section-title">ℹ️ 关于 Lumina</h2>
         <div class="info-item">
           <span class="info-label">版本</span>
        <span class="info-value">1.0.0 (Demo)</span>
       </div>
         <div class="info-item">
           <span class="info-label">数据目录</span>
-        <span class="info-value">~/.local/share/mercury/</span>
+        <span class="info-value">~/.local/share/lumina/</span>
         </div>
         <div class="info-item">
           <span class="info-label">GitHub</span>
@@ -135,19 +109,12 @@ import { computed, onMounted, ref } from 'vue'
 
 const emit = defineEmits<{
   'close': []
-  'settings-changed': []
 }>()
 
 const llmConfig = ref({
   baseUrl: '',
   apiKey: '',
   model: ''
-})
-
-const readingSettings = ref({
-  fontSize: '16',
-  lineHeight: '1.8',
-  theme: 'light'
 })
 
 const isSaving = ref(false)
@@ -171,15 +138,6 @@ onMounted(async () => {
       apiKey: config.apiKey || '',
       model: config.model || ''
     }
-
-    // 加载阅读设置
-    const fontSize = await window.electronAPI.getSetting('reading.fontSize')
-    const lineHeight = await window.electronAPI.getSetting('reading.lineHeight')
-    const theme = await window.electronAPI.getSetting('reading.theme')
-
-    if (fontSize) readingSettings.value.fontSize = fontSize
-    if (lineHeight) readingSettings.value.lineHeight = lineHeight
-    if (theme) readingSettings.value.theme = theme
 
     // 加载 AI 用量统计
     if (window.electronAPI.getUsageStats) {
@@ -213,27 +171,6 @@ const saveLLMConfig = async () => {
   }
 }
 
-const saveReadingSettings = async () => {
-  if (!window.electronAPI) {
-    alert('当前环境不支持保存设置')
-    return
-  }
-
-  isSaving.value = true
-  statusMessage.value = ''
-  try {
-    await window.electronAPI.saveSetting('reading.fontSize', readingSettings.value.fontSize)
-    await window.electronAPI.saveSetting('reading.lineHeight', readingSettings.value.lineHeight)
-    await window.electronAPI.saveSetting('reading.theme', readingSettings.value.theme)
-    statusMessage.value = '阅读设置已保存'
-    emit('settings-changed')
-  } catch (error) {
-    console.error('Failed to save reading settings', error)
-    statusMessage.value = `保存失败：${error instanceof Error ? error.message : String(error)}`
-  } finally {
-    isSaving.value = false
-  }
-}
 </script>
 
 <style scoped>

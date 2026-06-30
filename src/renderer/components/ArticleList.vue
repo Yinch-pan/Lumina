@@ -1,7 +1,14 @@
 <template>
   <div class="article-list">
     <div class="list-header">
-    <div class="list-title">文章列表</div>
+      <div class="list-title">文章列表</div>
+      <input
+        class="search-input"
+        type="text"
+        :value="searchQuery"
+        placeholder="搜索文章..."
+        @input="$emit('search', ($event.target as HTMLInputElement).value)"
+      />
       <div class="list-controls">
         <button
           class="control-btn"
@@ -24,14 +31,14 @@
         >
           已读
         </button>
+        <button
+          class="control-btn"
+          :class="{ active: filter === 'starred' }"
+          @click="$emit('change-filter', 'starred')"
+        >
+          收藏
+        </button>
       </div>
-        <input
-          class="search-input"
-          type="text"
-          :value="searchQuery"
-          placeholder="搜索文章..."
-          @input="$emit('search', ($event.target as HTMLInputElement).value)"
-        />
     </div>
 
     <div v-if="isLoading" class="article-state">
@@ -78,7 +85,7 @@
 <script setup lang="ts">
 import { Inbox, LoaderCircle } from 'lucide-vue-next'
 
-export type ArticleFilter = 'all' | 'unread' | 'read'
+export type ArticleFilter = 'all' | 'unread' | 'read' | 'starred'
 
 defineProps<{
   articles: Array<{
@@ -130,6 +137,8 @@ defineEmits<{
 .list-controls {
   display: flex;
   gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .control-btn {

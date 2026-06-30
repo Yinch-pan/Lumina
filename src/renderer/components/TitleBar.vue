@@ -1,6 +1,6 @@
 <template>
   <div class="titlebar">
-    <div class="titlebar-title">Mercury</div>
+    <div class="titlebar-title">Lumina</div>
     <button class="settings-btn" @click="$emit('open-settings')" title="设置">
       ⚙️
     </button>

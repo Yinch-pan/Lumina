@@ -8,7 +8,7 @@ import { app } from 'electron'
  */
 
 export function initDatabase(): Database.Database {
-  const dbPath = path.join(app.getPath('userData'), 'mercury.db')
+  const dbPath = path.join(app.getPath('userData'), 'lumina.db')
   return initDatabaseAtPath(dbPath)
 }
 

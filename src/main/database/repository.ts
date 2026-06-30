@@ -328,20 +328,26 @@ export class Repository {
   searchArticles(query: string): Article[] {
     const trimmed = query.trim()
     if (!trimmed) return []
-    const ftsQuery = trimmed.split(/\s+/).map((t) => `"${t.replace(/"/g, '""')}"`).join(' ')
-    try {
-      const rows = this.db.prepare(`
-        SELECT entries.*
-        FROM entries_fts
-        JOIN entries ON entries.rowid = entries_fts.rowid
-        WHERE entries_fts MATCH ?
-        ORDER BY COALESCE(entries.published_at, entries.created_at) DESC
-      `).all(ftsQuery) as EntryRow[]
-      return rows.map((row) => this.toArticle(row))
-    } catch {
-      // 纯标点/特殊字符在 unicode61 分词后为空，FTS5 可能抛语法错误——视作无结果
-      return []
-    }
+
+    const likeQuery = `%${escapeLikePattern(trimmed)}%`
+
+    const rows = this.db.prepare(`
+      SELECT entries.*
+      FROM entries
+      LEFT JOIN entry_contents ON entry_contents.entry_id = entries.id
+      WHERE entries.title LIKE ? ESCAPE '\\'
+         OR COALESCE(entries.excerpt, '') LIKE ? ESCAPE '\\'
+         OR COALESCE(entry_contents.cleaned_markdown, '') LIKE ? ESCAPE '\\'
+      ORDER BY
+        CASE
+          WHEN entries.title LIKE ? ESCAPE '\\' THEN 0
+          WHEN COALESCE(entries.excerpt, '') LIKE ? ESCAPE '\\' THEN 1
+          ELSE 2
+        END,
+        COALESCE(entries.published_at, entries.created_at) DESC
+    `).all(likeQuery, likeQuery, likeQuery, likeQuery, likeQuery) as EntryRow[]
+
+    return rows.map((row) => this.toArticle(row))
   }
 
   getArticleContent(entryId: string): ArticleContent | undefined {
@@ -736,6 +742,10 @@ function normalizeNullableTitle(value?: string | null): string | null {
 
   const trimmed = value.trim()
   return trimmed ? trimmed : null
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`)
 }
 
 function normalizeTitleKey(value: string): string {

@@ -15,7 +15,6 @@
         @import-opml="openOpmlDialog"
         @export-opml="handleExportOpml"
         @refresh="handleRefresh"
-        @select-starred="handleSelectStarred"
       />
       <ArticleList
         :articles="articles"
@@ -50,7 +49,7 @@
     </div>
 
     <!-- 设置页面 -->
-    <SettingsView v-if="showSettings" @close="showSettings = false" @settings-changed="applyReadingSettings" />
+    <SettingsView v-if="showSettings" @close="showSettings = false" />
     <AddSubscriptionDialog
       v-if="showAddSubscription"
       :isLoading="isAddingFeed"
@@ -203,7 +202,7 @@ const highlights = ref<
     createdAt: number
   }>
 >([])
-let unsubscribeTranslate: (() => void) | null = null
+let activeTranslationRequest: { articleId: string; targetLang: string } | null = null
 const summaryStreaming = ref(false)
 let unsubscribeSummary: (() => void) | null = null
 const articleList = ref<Article[]>(mockArticles)
@@ -241,6 +240,10 @@ const articles = computed(() => {
     return filteredArticles.filter((article) => article.isRead)
   }
 
+  if (articleFilter.value === 'starred') {
+    return filteredArticles.filter((article) => article.isStarred)
+  }
+
   return filteredArticles
 })
 
@@ -255,7 +258,13 @@ onMounted(() => {
 
   if (window.electronAPI?.onTranslateProgress) {
     unsubscribeTranslate = window.electronAPI.onTranslateProgress((payload) => {
-      if (payload.articleId !== selectedArticleId.value) return
+      if (
+        payload.articleId !== selectedArticleId.value ||
+        !activeTranslationRequest ||
+        payload.articleId !== activeTranslationRequest.articleId
+      ) {
+        return
+      }
       const seg = {
         index: payload.index,
         source: payload.source,
@@ -389,6 +398,7 @@ const handleSelectTag = (tagName: string) => {
 
 const handleSelectArticle = async (articleId: string) => {
   selectedArticleId.value = articleId
+  activeTranslationRequest = null
   translationSegments.value = []
   highlights.value = []
   summaryStreaming.value = false
@@ -793,24 +803,44 @@ const handleSummarize = async (length: 'short' | 'medium' | 'long' = 'medium') =
   }
 }
 
-const handleTranslate = async () => {
+const handleTranslate = async (targetLang: string) => {
   if (!window.electronAPI || !selectedArticleId.value || !selectedArticleContent.value) {
     alert('请先选择一篇文章')
     return
   }
 
-  const targetLang = prompt('请输入目标语言', '中文')
-  if (!targetLang) {
-    return
+  const requestArticleId = selectedArticleId.value
+  activeTranslationRequest = {
+    articleId: requestArticleId,
+    targetLang
   }
 
   try {
     translationSegments.value = []
-    const translation = await window.electronAPI.translateArticle(selectedArticleId.value, targetLang)
+    const translation = await window.electronAPI.translateArticle(requestArticleId, targetLang)
+    if (
+      selectedArticleId.value !== requestArticleId ||
+      !selectedArticleContent.value ||
+      !activeTranslationRequest ||
+      activeTranslationRequest.articleId !== requestArticleId ||
+      activeTranslationRequest.targetLang !== targetLang
+    ) {
+      return
+    }
     selectedArticleContent.value = { ...selectedArticleContent.value, translation }
   } catch (error) {
+    if (activeTranslationRequest?.articleId !== requestArticleId) {
+      return
+    }
     console.error('Failed to translate article', error)
     alert(`翻译失败：${error instanceof Error ? error.message : String(error)}`)
+  } finally {
+    if (
+      activeTranslationRequest?.articleId === requestArticleId &&
+      activeTranslationRequest.targetLang === targetLang
+    ) {
+      activeTranslationRequest = null
+    }
   }
 }
 
@@ -932,18 +962,6 @@ const handleDeleteHighlight = async (id: string) => {
     if (selectedArticleId.value) await loadHighlights(selectedArticleId.value)
   } catch (e) {
     console.error('Failed to delete highlight', e)
-  }
-}
-
-const handleSelectStarred = async () => {
-  if (!window.electronAPI) return
-  try {
-    articleList.value = await window.electronAPI.getStarredArticles()
-    selectedArticleId.value = ''
-    selectedArticleContent.value = null
-    highlights.value = []
-  } catch (error) {
-    console.error('Failed to load starred', error)
   }
 }
 

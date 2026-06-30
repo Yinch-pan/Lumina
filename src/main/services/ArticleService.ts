@@ -5,7 +5,7 @@ import { IArticleService, ICleaningService } from './interfaces'
 
 type FetchText = (url: string) => Promise<string>
 
-const DEFAULT_USER_AGENT = 'Mercury/1.0 RSS Reader'
+const DEFAULT_USER_AGENT = 'Lumina/1.0 RSS Reader'
 
 export class ArticleService implements IArticleService {
   private readonly cleaningService: ICleaningService

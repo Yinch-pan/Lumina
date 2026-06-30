@@ -33,9 +33,13 @@
             <FileText class="action-icon" />
             <span>&#38271;&#25688;&#35201;</span>
           </button>
-          <button class="action-btn" @click="$emit('translate')">
+          <button class="action-btn" @click="$emit('translate', '中文')">
             <Languages class="action-icon" />
-            <span>AI &#32763;&#35793;</span>
+            <span>译为中文</span>
+          </button>
+          <button class="action-btn" @click="$emit('translate', 'English')">
+            <Languages class="action-icon" />
+            <span>译为英文</span>
           </button>
           <button class="action-btn" @click="$emit('add-tag')">
             <Tag class="action-icon" />
@@ -252,7 +256,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   summarize: [length: 'short' | 'medium' | 'long']
   navigate: [direction: 'prev' | 'next']
-  translate: []
+  translate: [lang: string]
   'add-tag': []
   'mark-unread': []
   'toggle-star': []
@@ -822,8 +826,8 @@ watch(
 }
 
 .article-content {
-  font-size: 16px;
-  line-height: 1.85;
+  font-size: inherit;
+  line-height: inherit;
   color: #26313d;
   overflow-wrap: break-word;
   word-break: break-word;

@@ -29,7 +29,7 @@ interface ParsedFeed {
 
 type FetchText = (url: string) => Promise<string>
 
-const DEFAULT_USER_AGENT = 'Mercury/1.0 RSS Reader'
+const DEFAULT_USER_AGENT = 'Lumina/1.0 RSS Reader'
 const MAX_REFRESH_INTERVAL_MINUTES = 60 * 24 * 30
 const TRACKING_QUERY_PARAMS = new Set([
   'fbclid',
@@ -82,7 +82,7 @@ export class FeedService implements IFeedService {
       updatedAt: now
     })
 
-    this.saveFeedItems(feedId, parsed.items)
+    this.saveFeedItems(feedId, parsed.items, { url: normalizedUrl })
 
     const feed = this.repository.getAllFeeds().find((item) => item.id === feedId)
     if (!feed) {
@@ -167,7 +167,7 @@ export class FeedService implements IFeedService {
         lastError: null,
         updatedAt: now
       })
-      this.saveFeedItems(feedId, parsed.items)
+      this.saveFeedItems(feedId, parsed.items, feed)
     } catch (error) {
       this.recordRefreshFailure(feed.id, now, error)
       throw error
@@ -283,7 +283,7 @@ export class FeedService implements IFeedService {
       opml: {
         '@_version': '2.0',
         head: {
-          title: 'Mercury Subscriptions'
+          title: 'Lumina Subscriptions'
         },
         body: {
           outline: feeds.map((feed) => ({
@@ -309,7 +309,7 @@ export class FeedService implements IFeedService {
     }
   }
 
-  private saveFeedItems(feedId: string, items: ParsedFeedItem[]): void {
+  private saveFeedItems(feedId: string, items: ParsedFeedItem[], feed: { url: string }): void {
     const now = Date.now()
 
     for (const item of items) {
@@ -317,7 +317,7 @@ export class FeedService implements IFeedService {
       if (!url) {
         continue
       }
-      const normalizedUrl = normalizeEntryUrl(url)
+      const normalizedUrl = normalizeEntryUrl(url, feed.url)
 
       this.repository.upsertEntry({
         id: randomUUID(),
@@ -474,14 +474,14 @@ function normalizeUrl(url: string): string {
   return new URL(withProtocol).toString()
 }
 
-function normalizeEntryUrl(url: string): string {
+function normalizeEntryUrl(url: string, baseUrl?: string): string {
   const trimmed = url.trim()
   if (!trimmed) {
     return trimmed
   }
 
   try {
-    const parsed = new URL(trimmed)
+    const parsed = baseUrl ? new URL(trimmed, baseUrl) : new URL(trimmed)
     for (const key of Array.from(parsed.searchParams.keys())) {
       if (key.toLowerCase().startsWith('utm_') || TRACKING_QUERY_PARAMS.has(key.toLowerCase())) {
         parsed.searchParams.delete(key)

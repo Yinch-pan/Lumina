@@ -28,7 +28,6 @@
     </div>
 
     <div class="sidebar-filters">
-      <div class="filter-label starred-entry" @click="$emit('select-starred')">⭐ 收藏</div>
       <div class="filter-label">按标签筛选</div>
       <div class="tag-filter">
         <span
@@ -102,7 +101,6 @@ defineEmits<{
   'edit-feed': [feedId: string]
   'import-opml': []
   'export-opml': []
-  'select-starred': []
   'refresh': []
 }>()
 
@@ -210,16 +208,6 @@ const formatLastRefresh = (value?: string) => {
   font-size: 12px;
   color: #909399;
   margin-bottom: 8px;
-}
-
-.starred-entry {
-  cursor: pointer;
-  font-size: 13px;
-  color: #606266;
-}
-
-.starred-entry:hover {
-  color: #f5a623;
 }
 
 .tag-filter {

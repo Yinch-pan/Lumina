@@ -105,7 +105,7 @@ export class ExportService implements IExportService {
     lines.push('')
     lines.push('---')
     lines.push('')
-    lines.push(`*导出自 Mercury RSS 阅读器*`)
+    lines.push(`*导出自 Lumina RSS 阅读器*`)
 
   return lines.join('\n')
   }
